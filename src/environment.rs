@@ -87,3 +87,41 @@ pub trait Environment {
     // use associated constant.
     fn metadata() -> Metadata;
 }
+
+
+
+/// Est-ce qu'un extension trait serait plus adapaté?
+/// 
+
+/// Fourni une impélémentation par default des méthodes.
+pub trait Wrapper {
+
+    type Environment: Environment;
+
+
+    fn environment_mut(&mut self) -> &mut Self::Environment;
+    fn environment(&self) -> &Self::Environment;
+
+    fn act(&mut self, action: <Self::Environment as Environment>::Action) {
+        self.environment_mut().act(action);
+
+    }
+
+
+    fn observe(&self) -> (f64, <Self::Environment as Environment>::Observation, bool) {
+        self.environment().observe()
+    }
+
+    fn render(&self) {
+        self.environment().render()
+    }
+
+
+
+    // TODO: definir les métada.
+    // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
+    // use associated constant.
+    fn metadata() -> Metadata {
+        <Self::Environment as Environment>::metadata()
+    }
+}
