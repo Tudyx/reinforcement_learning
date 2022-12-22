@@ -1320,6 +1320,7 @@ dependencies = [
  "egui",
  "ndarray",
  "ndarray-rand",
+ "rand",
  "rand_isaac",
  "serde",
 ]

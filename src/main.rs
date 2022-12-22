@@ -8,10 +8,11 @@
 // - Est ce que l'action space je peux le definir à partir d'un associated constant?
 // - Est ce que je fois parallelizer l'environment pour voir si cela raoute des contarintes?
 mod algorithm;
+mod easy_21;
 mod environment;
+mod viewer;
 
 use std::collections::HashMap;
-use std::sync::mpsc;
 
 use ndarray::{array, Array, Array1};
 use ndarray_rand::rand::SeedableRng;
@@ -210,19 +211,29 @@ impl Environment for TimingEnv {
     }
 }
 
-
-struct RecordActs<E> where E: Environment, E::Action : Clone{
-
+struct RecordActs<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
     acts: Vec<E::Action>,
 }
 
-struct RecordActs2<E> where E: Environment, E::Action : Clone{
+struct RecordActs2<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
     acts: Vec<E::Action>,
     env: E,
 }
 
-impl<E> Environment for RecordActs2<E> where E: Environment, E::Action : Clone {
-    type Action =  E::Action;
+impl<E> Environment for RecordActs2<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
+    type Action = E::Action;
     type Observation = E::Observation;
 
     fn act(&mut self, action: Self::Action) {
@@ -239,18 +250,21 @@ impl<E> Environment for RecordActs2<E> where E: Environment, E::Action : Clone {
     }
 }
 
-impl<E> RecordActs2<E> where E: Environment, E::Action : Clone {
-
+impl<E> RecordActs2<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
     pub fn new(env: E) -> Self {
         Self { acts: vec![], env }
-
     }
 }
 
-
-
-impl<E> Wrapper for RecordActs<E> 
-where E : Environment,  E::Action : Clone{
+impl<E> Wrapper for RecordActs<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
     type Environment = E;
 
     fn act(&mut self, action: E::Action) {
@@ -265,10 +279,13 @@ where E : Environment,  E::Action : Clone{
     fn environment(&self) -> &Self::Environment {
         todo!()
     }
-
 }
 
-impl<E> RecordActs<E> where E: Environment, E::Action : Clone {
+impl<E> RecordActs<E>
+where
+    E: Environment,
+    E::Action: Clone,
+{
     pub fn new() -> Self {
         Self { acts: vec![] }
     }
@@ -281,7 +298,6 @@ fn fast() {
     const NUM_STEPS: u64 = 10000;
     const EPISODE_LEN: u64 = 100;
 
-
     let now = Instant::now();
 
     let mut env = TimingEnv::new(EPISODE_LEN);
@@ -291,7 +307,7 @@ fn fast() {
 
     for step in 0..NUM_STEPS {
         env.act(());
-        let (_, _, first)= env.observe();
+        let (_, _, first) = env.observe();
         if first {
             episode_count += 1;
         }
@@ -300,34 +316,30 @@ fn fast() {
         }
     }
 
-    let elapsed =  now.elapsed().as_millis();
+    let elapsed = now.elapsed().as_millis();
 
     println!("{elapsed}");
     // We assert we spend less than one miliseconds by step
     assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
-
 }
-
 
 #[test]
 fn wrapper() {
     const NUM_STEPS: u64 = 1000;
     const EPISODE_LEN: u64 = 10;
 
-
     let now = Instant::now();
 
     let mut env = TimingEnv::new(EPISODE_LEN);
 
     let mut env: RecordActs<TimingEnv> = RecordActs::new();
-    
 
     let mut episode_count = 0;
     let expected_episode_count = NUM_STEPS / EPISODE_LEN;
 
     for step in 0..NUM_STEPS {
         env.act(());
-        let (_, _, first)= env.observe();
+        let (_, _, first) = env.observe();
         if first {
             episode_count += 1;
         }
@@ -336,34 +348,30 @@ fn wrapper() {
         }
     }
 
-    let elapsed =  now.elapsed().as_millis();
+    let elapsed = now.elapsed().as_millis();
 
     println!("{elapsed}");
     // We assert we spend less than one miliseconds by step
     assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
-
 }
-
 
 #[test]
 fn wrapper2() {
     const NUM_STEPS: u64 = 1000;
     const EPISODE_LEN: u64 = 10;
 
-
     let now = Instant::now();
 
     let env = TimingEnv::new(EPISODE_LEN);
 
     let mut env = RecordActs2::new(env);
-    
 
     let mut episode_count = 0;
     let expected_episode_count = NUM_STEPS / EPISODE_LEN;
 
     for step in 0..NUM_STEPS {
         env.act(());
-        let (_, _, first)= env.observe();
+        let (_, _, first) = env.observe();
         if first {
             episode_count += 1;
         }
@@ -372,13 +380,12 @@ fn wrapper2() {
         }
     }
 
-    let elapsed =  now.elapsed().as_millis();
+    let elapsed = now.elapsed().as_millis();
 
     println!("{elapsed}");
     assert_eq!(env.acts.len(), NUM_STEPS as usize);
     // We assert we spend less than one miliseconds by step
     assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
-
 }
 fn train() {
     const NUM_STEPS: u64 = 1000;

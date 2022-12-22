@@ -81,8 +81,6 @@ pub trait Environment {
 
     fn render(&self) {}
 
-    fn close(&mut self) {}
-
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.
     fn metadata() -> Metadata;
