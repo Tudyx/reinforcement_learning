@@ -9,6 +9,7 @@ use crate::Environment;
 use rand::prelude::*;
 use std::cmp::Ordering;
 
+/// Simplified version of BlackJack.
 pub struct Easy21 {
     player_cards: Cards,
     bank_cards: Cards,
@@ -104,7 +105,7 @@ pub struct Observation {
 
 #[derive(Debug)]
 pub enum Winner {
-    Unknow,
+    Unknown,
     Player,
     Bank,
     Equality,
@@ -151,7 +152,7 @@ impl Environment for Easy21 {
         };
 
         match self.winner {
-            Winner::Unknow => (0., observation, false),
+            Winner::Unknown => (0., observation, false),
             Winner::Player => (1., observation, true),
             Winner::Bank => (-1., observation, true),
             Winner::Equality => (0., observation, true),
@@ -159,7 +160,7 @@ impl Environment for Easy21 {
     }
 
     fn metadata() -> crate::environment::Metadata {
-        todo!()
+        crate::environment::Metadata::default()
     }
 }
 
@@ -168,7 +169,7 @@ impl Default for Easy21 {
         Self {
             player_cards: Cards::default(),
             bank_cards: Cards::default(),
-            winner: Winner::Unknow,
+            winner: Winner::Unknown,
         }
     }
 }
@@ -185,9 +186,4 @@ impl Easy21 {
     fn reset(&mut self) {
         *self = Easy21::default();
     }
-}
-
-#[test]
-fn rand_1_10() {
-    println!("Dice roll: {}", thread_rng().gen_range(1..=10));
 }

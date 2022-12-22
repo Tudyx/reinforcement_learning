@@ -41,6 +41,15 @@ pub struct Metadata {
     pub render_fps: usize,
 }
 
+impl Default for Metadata {
+    fn default() -> Self {
+        Self {
+            render_modes: vec![],
+            render_fps: 0,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Metadata2<const N: usize> {
     pub render_modes: [RenderMode; N],
@@ -51,11 +60,9 @@ pub trait Space<T> {}
 
 /// Je pense que l'action space est utile pour l'agent.
 
-
-
 struct Observe<O> {
     observation: O,
-    reward: f64
+    reward: f64,
 }
 pub trait Environment {
     // const METADATA: Metadata2<2>;
@@ -75,51 +82,11 @@ pub trait Environment {
     // TODO: the last tuple element is a dict
     fn act(&mut self, action: Self::Action);
 
-
     fn observe(&self) -> (f64, Self::Observation, bool);
-
 
     fn render(&self) {}
 
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.
     fn metadata() -> Metadata;
-}
-
-
-
-/// Est-ce qu'un extension trait serait plus adapaté?
-/// 
-
-/// Fourni une impélémentation par default des méthodes.
-pub trait Wrapper {
-
-    type Environment: Environment;
-
-
-    fn environment_mut(&mut self) -> &mut Self::Environment;
-    fn environment(&self) -> &Self::Environment;
-
-    fn act(&mut self, action: <Self::Environment as Environment>::Action) {
-        self.environment_mut().act(action);
-
-    }
-
-
-    fn observe(&self) -> (f64, <Self::Environment as Environment>::Observation, bool) {
-        self.environment().observe()
-    }
-
-    fn render(&self) {
-        self.environment().render()
-    }
-
-
-
-    // TODO: definir les métada.
-    // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
-    // use associated constant.
-    fn metadata() -> Metadata {
-        <Self::Environment as Environment>::metadata()
-    }
 }
