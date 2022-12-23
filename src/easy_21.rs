@@ -40,22 +40,6 @@ impl Cards {
     }
 }
 
-#[test]
-fn sum() {
-    let cards = Cards(vec![
-        Card {
-            color: Color::Black,
-            number: 10,
-        },
-        Card {
-            color: Color::Red,
-            number: 2,
-        },
-    ]);
-
-    assert_eq!(cards.sum(), 8);
-}
-
 impl Default for Cards {
     /// At the start of the game both the player and the dealer draw one black
     /// card (fully observed)
@@ -207,5 +191,50 @@ impl Easy21 {
         self.player_cards = Cards::default();
         self.bank_cards = Cards::default();
         self.first = true;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sum() {
+        let cards = Cards(vec![
+            Card {
+                color: Color::Black,
+                number: 10,
+            },
+            Card {
+                color: Color::Red,
+                number: 2,
+            },
+        ]);
+
+        assert_eq!(cards.sum(), 8);
+    }
+
+    #[test]
+    fn color_distribution() {
+        const CARD_NUMBER: u64 = 100_000;
+        let mut num_red_cards = 0;
+        let mut num_black_cards = 0;
+
+        for _ in 0..CARD_NUMBER {
+            let card = Card::new_random();
+            match card.color {
+                Color::Red => num_red_cards += 1,
+                Color::Black => num_black_cards += 1,
+            }
+        }
+
+        let red_card_ratio = num_red_cards as f64 / CARD_NUMBER as f64;
+        let black_card_ratio = num_black_cards as f64 / CARD_NUMBER as f64;
+
+        println!("Percentage of red cards: {red_card_ratio}");
+        println!("Percentage of black cards: {black_card_ratio}");
+
+        assert!((0.30..=0.36).contains(&red_card_ratio));
+        assert!((0.60..=0.70).contains(&black_card_ratio));
     }
 }
