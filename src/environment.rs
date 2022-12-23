@@ -64,24 +64,20 @@ struct Observe<O> {
     observation: O,
     reward: f64,
 }
+
+// inspired de gym3 API.
+// la gym3 api ne gere pas les terminated observation.
+// y'a un décalage contre intuitif dans l'observation.
 pub trait Environment {
     // const METADATA: Metadata2<2>;
-
-    // const LOL: usize;
-
-    // type ActionSpace: Space<Self::Action>;
-    // type ObservationSpace: Space<Self::Observation>;
-
-    // type RewardRange;
-    // type Spec;
-    // type NpRandom;
-
     type Action;
     type Observation;
 
     // TODO: the last tuple element is a dict
     fn act(&mut self, action: Self::Action);
 
+    /// (Reward, observation first)
+    /// The reward correspond to the previous action (not taken from the current observation)
     fn observe(&self) -> (f64, Self::Observation, bool);
 
     fn render(&self) {}

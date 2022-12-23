@@ -14,6 +14,7 @@ pub struct Easy21 {
     player_cards: Cards,
     bank_cards: Cards,
     winner: Winner,
+    first: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -74,8 +75,12 @@ pub struct Card {
 
 impl Card {
     fn new_random() -> Self {
-        // FIXME: Red must have a probability of 1/3 and black 2/3.
-        let color = if random() { Color::Red } else { Color::Black };
+        //  Red has a probability of 1/3 and black 2/3.
+        let color = match thread_rng().gen_range(1..=3) {
+            1 => Color::Red,
+            2..=3 => Color::Black,
+            _ => unreachable!(),
+        };
 
         Self {
             number: thread_rng().gen_range(1..=10),
@@ -97,7 +102,7 @@ pub enum Action {
     Stick,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Observation {
     player_cards: Cards,
     bank_cards: Cards,
@@ -116,11 +121,18 @@ impl Environment for Easy21 {
     type Observation = Observation;
 
     fn act(&mut self, action: Self::Action) {
+        if self.first {
+            self.winner = Winner::Unknown;
+            self.first = false;
+        }
+
         match action {
             Action::Hit => {
                 self.player_cards.push(Card::new_random());
                 if self.is_player_busted() {
+                    println!("Player Busted! ({})", self.player_cards.sum());
                     self.winner = Winner::Bank;
+                    self.reset();
                 }
             }
             // End of the game.
@@ -131,13 +143,14 @@ impl Environment for Easy21 {
                 }
 
                 if self.is_bank_busted() {
+                    println!("Bank Busted! ({})", self.bank_cards.sum());
                     self.winner = Winner::Player;
-                }
-
-                match self.player_cards.sum().cmp(&self.bank_cards.sum()) {
-                    Ordering::Less => self.winner = Winner::Bank,
-                    Ordering::Equal => self.winner = Winner::Equality,
-                    Ordering::Greater => self.winner = Winner::Player,
+                } else {
+                    match self.player_cards.sum().cmp(&self.bank_cards.sum()) {
+                        Ordering::Less => self.winner = Winner::Bank,
+                        Ordering::Equal => self.winner = Winner::Equality,
+                        Ordering::Greater => self.winner = Winner::Player,
+                    }
                 }
                 // We reset the env here. (act is the only mutable function)
                 self.reset();
@@ -151,11 +164,16 @@ impl Environment for Easy21 {
             bank_cards: self.bank_cards.clone(),
         };
 
+        if !self.first {
+            println!("Player score {}", self.player_cards.sum());
+            println!("Bank score {}", self.bank_cards.sum());
+        }
+
         match self.winner {
-            Winner::Unknown => (0., observation, false),
-            Winner::Player => (1., observation, true),
-            Winner::Bank => (-1., observation, true),
-            Winner::Equality => (0., observation, true),
+            Winner::Unknown => (0., observation, self.first),
+            Winner::Player => (1., observation, self.first),
+            Winner::Bank => (-1., observation, self.first),
+            Winner::Equality => (0., observation, self.first),
         }
     }
 
@@ -170,6 +188,7 @@ impl Default for Easy21 {
             player_cards: Cards::default(),
             bank_cards: Cards::default(),
             winner: Winner::Unknown,
+            first: true,
         }
     }
 }
@@ -183,7 +202,10 @@ impl Easy21 {
         self.bank_cards.is_busted()
     }
 
+    // we reset everything except the winner, because we need it for the next observation.
     fn reset(&mut self) {
-        *self = Easy21::default();
+        self.player_cards = Cards::default();
+        self.bank_cards = Cards::default();
+        self.first = true;
     }
 }
