@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "interactive"
+path = "src/interactive.rs"
+
+[[bin]]
+name = "mc"
+path = "src/monte_carlo.rs"
+
 [dependencies]
 anyhow = "1.0.68"
 eframe = "0.19.0"

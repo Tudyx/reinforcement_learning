@@ -19,10 +19,6 @@ pub trait Wrapper {
         self.environment().observe()
     }
 
-    fn render(&self) {
-        self.environment().render()
-    }
-
     // TODO: definir les métada.
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.

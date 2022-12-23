@@ -61,8 +61,9 @@ pub trait Space<T> {}
 /// Je pense que l'action space est utile pour l'agent.
 
 struct Observe<O> {
+    last_reward: f64,
     observation: O,
-    reward: f64,
+    first: bool,
 }
 
 // inspired de gym3 API.
@@ -79,8 +80,6 @@ pub trait Environment {
     /// (Reward, observation first)
     /// The reward correspond to the previous action (not taken from the current observation)
     fn observe(&self) -> (f64, Self::Observation, bool);
-
-    fn render(&self) {}
 
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.

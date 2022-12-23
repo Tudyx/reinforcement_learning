@@ -9,15 +9,19 @@ use crate::Environment;
 use rand::prelude::*;
 use std::cmp::Ordering;
 
+// TODO: explore the "last_observe" pattern
+// <https://github.com/christopher-hesse/computer-tennis/blob/9f8aeacf5240d616179fdadc4fc50c9fb15987b7/computer_tennis/env.py#L150>
+
 /// Simplified version of BlackJack.
 pub struct Easy21 {
     player_cards: Cards,
     bank_cards: Cards,
     winner: Winner,
     first: bool,
+    last_reward: f64, //TODO: explore this pattern
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 struct Cards(Vec<Card>);
 
 impl Cards {
@@ -51,7 +55,7 @@ impl Default for Cards {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Card {
     number: u8,
     color: Color,
@@ -73,12 +77,13 @@ impl Card {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Color {
     Red,
     Black,
 }
 
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Action {
     /// Take a new card.
     Hit,
@@ -86,7 +91,7 @@ pub enum Action {
     Stick,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Observation {
     player_cards: Cards,
     bank_cards: Cards,
@@ -155,9 +160,9 @@ impl Environment for Easy21 {
 
         let reward = match self.winner {
             Winner::Unknown => 0.,
+            Winner::Equality => 0.,
             Winner::Player => 1.,
             Winner::Bank => -1.,
-            Winner::Equality => 0.,
         };
 
         (reward, observation, self.first)
@@ -175,6 +180,7 @@ impl Default for Easy21 {
             bank_cards: Cards::default(),
             winner: Winner::Unknown,
             first: true,
+            last_reward: 0.0,
         }
     }
 }
@@ -188,7 +194,8 @@ impl Easy21 {
         self.bank_cards.is_busted()
     }
 
-    // we reset everything except the winner, because we need it for the next observation.
+    /// we reset everything except the winner, because we need it for the next observation
+    /// to compute the reward.
     fn reset(&mut self) {
         self.player_cards = Cards::default();
         self.bank_cards = Cards::default();
