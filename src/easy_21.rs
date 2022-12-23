@@ -153,12 +153,14 @@ impl Environment for Easy21 {
             println!("Bank score {}", self.bank_cards.sum());
         }
 
-        match self.winner {
-            Winner::Unknown => (0., observation, self.first),
-            Winner::Player => (1., observation, self.first),
-            Winner::Bank => (-1., observation, self.first),
-            Winner::Equality => (0., observation, self.first),
-        }
+        let reward = match self.winner {
+            Winner::Unknown => 0.,
+            Winner::Player => 1.,
+            Winner::Bank => -1.,
+            Winner::Equality => 0.,
+        };
+
+        (reward, observation, self.first)
     }
 
     fn metadata() -> crate::environment::Metadata {
