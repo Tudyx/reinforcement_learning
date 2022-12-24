@@ -1,20 +1,34 @@
-use ndarray::{s, Array, Array2, Array3};
+//! Monte Carlo agent.
+//! There is no discouting factor for the Easy21 assignement.
+
+use ndarray::{Array, Array2};
 use plotters::prelude::*;
 use rand::prelude::*;
 use rust_gym::easy_21::{Action, Easy21, Observation};
 use rust_gym::Environment;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+
+// Save the state value function
+fn save(state_value: Array2<f64>) {
+    let state_value = serde_json::to_value(state_value).unwrap();
+
+    let path = "/home/teddy/dev/python/easy21_plot/value_function.json";
+
+    let mut output = File::create(path).unwrap();
+    write!(output, "{}", serde_json::to_string(&state_value).unwrap()).unwrap();
+}
 
 /// Retex:
 /// Ord n'est pas implémenter pour f64!
 
 const NUM_EPISODE: usize = 100_000;
 
-const N0: f64 = 100.;
+const N_0: f64 = 100.;
 
-// There is no discouting factor for the Easy21 environment
-
-fn plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
+// TODO: try to have the same result than matplotlib.
+fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
     let root = BitMapBackend::new("images/3d-surface.png", (640, 480)).into_drawing_area();
 
     root.fill(&WHITE).unwrap();
@@ -57,6 +71,7 @@ impl MonteCarloAgent {
             env,
         }
     }
+
     fn random_policy() -> Action {
         if random() {
             Action::Stick
@@ -64,6 +79,7 @@ impl MonteCarloAgent {
             Action::Hit
         }
     }
+
     fn greedy_policy(&self, observation: &Observation) -> Action {
         let stick_value = self
             .action_value
@@ -86,8 +102,6 @@ impl MonteCarloAgent {
         let mut state_value = Array::zeros((21, 10));
 
         for (observation, _) in &self.visited_states {
-            // We compute q max
-
             let stick_value = self
                 .action_value
                 .get(&(observation.clone(), Action::Stick))
@@ -137,7 +151,7 @@ impl MonteCarloAgent {
                 // The more we have visited the state, the more epsilon will be small and the more
                 // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
                 // the state, the more we explore.
-                let epsilon = N0 / (N0 + self.visited_states[&observation] as f64);
+                let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
                 let exploring_prob = 1. - epsilon;
 
                 let action = if thread_rng().gen::<f64>() < exploring_prob {
@@ -166,6 +180,8 @@ impl MonteCarloAgent {
                 step += 1;
             }
 
+            // At each end of episode we update or action value.
+
             let episode_return = rewards.iter().sum::<f64>();
             // We iter over the trajectory.
             for step in 0..rewards.len() {
@@ -180,33 +196,14 @@ impl MonteCarloAgent {
                     .and_modify(|value| *value = *value + alpha * (episode_return - *value))
                     .or_insert(0.);
             }
-
-            // We update our value function at the end of each episode
-            // TODO: iterate over the trajectory, update `action_value`
         }
     }
 }
+
 fn main() {
     let env = Easy21::default();
-
     let mut mc_agent = MonteCarloAgent::new(env);
     mc_agent.learn_action_value_fuction();
-
     let state_value = mc_agent.compute_state_value_function();
-
     save(state_value);
-
-    // plot_action_value_fn(&action_value);
-}
-
-use std::fs::File;
-use std::io::Write;
-// Save the state value function
-fn save(state_value: Array2<f64>) {
-    let state_value = serde_json::to_value(state_value).unwrap();
-
-    let path = "/home/teddy/dev/python/easy21_plot/value_function.json";
-
-    let mut output = File::create(path).unwrap();
-    write!(output, "{}", serde_json::to_string(&state_value).unwrap()).unwrap();
 }
