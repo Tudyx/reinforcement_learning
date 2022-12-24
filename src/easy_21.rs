@@ -93,8 +93,10 @@ pub enum Action {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Observation {
-    player_cards: Cards,
-    bank_cards: Cards,
+    /// Sum of the player cards.
+    pub player_sum: i32,
+    /// Sum of the bank cards.
+    pub bank_sum: i32,
 }
 
 #[derive(Debug)]
@@ -149,8 +151,8 @@ impl Environment for Easy21 {
 
     fn observe(&self) -> (f64, Self::Observation, bool) {
         let observation = Observation {
-            player_cards: self.player_cards.clone(),
-            bank_cards: self.bank_cards.clone(),
+            player_sum: self.player_cards.sum(),
+            bank_sum: self.bank_cards.sum(),
         };
 
         if !self.first {

@@ -11,6 +11,6 @@ mod algorithm;
 pub mod easy_21;
 mod environment;
 pub use environment::Environment;
-mod grid_word;
+// mod grid_word;
 mod viewer;
 mod wrapper;
