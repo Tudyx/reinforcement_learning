@@ -19,9 +19,6 @@ use std::io::Write;
 /// Retex:
 /// Ord n'est pas implémenter pour f64!
 
-/// Number of episodes we will do to polish our estimation.
-const NUM_EPISODE: usize = 100_000;
-
 /// Define how much we explore.
 const N_0: f64 = 100.;
 
@@ -88,8 +85,8 @@ impl MonteCarloAgent {
             env,
         }
     }
-
-    fn update_state_value(&mut self, trajectory: Trajectory) {
+    /// Update the action-value function from the given trajectory.
+    fn update_action_value(&mut self, trajectory: Trajectory) {
         let episode_return = trajectory.cumulated_reward();
 
         for (state, action) in trajectory.iter() {
@@ -111,6 +108,7 @@ impl MonteCarloAgent {
         }
     }
 
+    /// We pick the action with the max action-value.
     fn choose_greedy_action(&self, observation: &Observation) -> Action {
         let stick_value = self
             .action_value
@@ -170,8 +168,8 @@ impl MonteCarloAgent {
         state_value
     }
 
-    fn learn_action_value_fuction(&mut self) {
-        for _ in 0..NUM_EPISODE {
+    fn learn_action_value_fuction(&mut self, num_episode: u64) {
+        for _ in 0..num_episode {
             // We record the trajectory of the episode.
             let mut trajectory = Trajectory::new();
             let mut step = 0;
@@ -205,7 +203,7 @@ impl MonteCarloAgent {
                 step += 1;
             }
             // At each end of episode we update our action-value function.
-            self.update_state_value(trajectory);
+            self.update_action_value(trajectory);
         }
     }
 }
@@ -253,9 +251,11 @@ fn save(state_value: Array2<f64>) {
 }
 
 fn main() {
+    /// Number of episodes we will do to polish our estimation.
+    const NUM_EPISODE: u64 = 100_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
-    mc_agent.learn_action_value_fuction();
+    mc_agent.learn_action_value_fuction(NUM_EPISODE);
     let state_value = mc_agent.compute_state_value_function();
     save(state_value);
 }
