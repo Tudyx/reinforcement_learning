@@ -1,5 +1,11 @@
 //! Monte Carlo agent.
 //! There is no discouting factor for the Easy21 assignement.
+//!
+//!
+
+// FIXME: in the plot we are not enought close to one.
+// TODO: benchmark le passage de Copy a CLone
+// TODO: benchmark si jamais je passe des reference pour le lookup.
 
 use ndarray::{Array, Array2};
 use plotters::prelude::*;
@@ -40,6 +46,9 @@ fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
         .unwrap();
 
     chart.configure_axes().draw().unwrap();
+
+    // More or less the equivalent of matplotlib `plot_surface`
+    // chart.draw_series(SurfaceSeries::xoz(a, b, f));
     chart
         .draw_series(LineSeries::new(
             action_value.iter().map(|((observation, _), reward)| {
@@ -134,8 +143,6 @@ impl MonteCarloAgent {
             let mut states = Vec::new();
             let mut actions = Vec::new();
             let mut rewards = Vec::new();
-
-            // FIXME: change it to an act/observe instead of observe/act
 
             let mut step = 0;
 
