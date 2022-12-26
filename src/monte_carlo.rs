@@ -69,17 +69,17 @@ impl MonteCarloAgent {
         }
     }
 
+    /// We take a greedy action with a probability of epsilon. Otherwise we take a random action.
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
         // The more we have visited the state, the more epsilon will be small and the more
         // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
         // the state, the more we explore.
         let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
-        let exploring_prob = 1. - epsilon;
 
-        if thread_rng().gen::<f64>() < exploring_prob {
-            Self::choose_random_action()
-        } else {
+        if thread_rng().gen::<f64>() < epsilon {
             self.choose_greedy_action(&observation)
+        } else {
+            Self::choose_random_action()
         }
     }
 
