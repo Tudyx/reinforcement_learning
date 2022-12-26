@@ -25,11 +25,56 @@ const NUM_EPISODE: usize = 100_000;
 /// Define how much we explore.
 const N_0: f64 = 100.;
 
+/// Represent a trajectory of through an episode.
+// Use a struct of array instead of an array of struct for efficiency.
+// TODO: benchmark to be sure its more efficient.
+struct Trajectory {
+    states: Vec<Observation>,
+    actions: Vec<Action>,
+    rewards: Vec<f64>,
+}
+
+impl Trajectory {
+    fn new() -> Self {
+        Self {
+            states: Vec::new(),
+            actions: Vec::new(),
+            rewards: Vec::new(),
+        }
+    }
+
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            states: Vec::with_capacity(capacity),
+            actions: Vec::with_capacity(capacity),
+            rewards: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn push(&mut self, step: (Observation, Action, f64)) {
+        self.states.push(step.0);
+        self.actions.push(step.1);
+        self.rewards.push(step.2);
+    }
+
+    /// Return the episode *return* A.K.A. the cumulated reward.
+    /// No discount factor is applied.
+    fn cumulated_reward(&self) -> f64 {
+        self.rewards.iter().sum()
+    }
+    /// Iterate over states and action
+    fn iter(&self) -> impl Iterator<Item = (&Observation, &Action)> {
+        self.states.iter().zip(self.actions.iter())
+    }
+}
+
 struct MonteCarloAgent {
     /// Our action-value function (q value)  that we will try to estimate.
     action_value: HashMap<(Observation, Action), f64>,
     /// The N(s) function. Give number of time we have visited a state.
     visited_states: HashMap<Observation, i32>,
+    // The N(s,a) function. Give the nimber of time we have visited a couple action state.
+    visited_state_action: HashMap<(Observation, Action), u64>,
     /// The underlying environment.
     env: Easy21,
 }
@@ -39,7 +84,22 @@ impl MonteCarloAgent {
         Self {
             action_value: HashMap::new(),
             visited_states: HashMap::new(),
+            visited_state_action: HashMap::new(),
             env,
+        }
+    }
+
+    fn update_state_value(&mut self, trajectory: Trajectory) {
+        let episode_return = trajectory.cumulated_reward();
+
+        for (state, action) in trajectory.iter() {
+            let alpha =
+                1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
+
+            self.action_value
+                .entry((state.clone(), action.clone()))
+                .and_modify(|value| *value = *value + alpha * (episode_return - *value))
+                .or_insert(0.);
         }
     }
 
@@ -111,15 +171,9 @@ impl MonteCarloAgent {
     }
 
     fn learn_action_value_fuction(&mut self) {
-        // The N(s,a) function. Give the nimber of time we have visited a couple action state.
-        let mut visited_state_action = HashMap::new();
-
         for _ in 0..NUM_EPISODE {
             // We record the trajectory of the episode.
-            let mut states = Vec::new();
-            let mut actions = Vec::new();
-            let mut rewards = Vec::new();
-
+            let mut trajectory = Trajectory::new();
             let mut step = 0;
 
             loop {
@@ -136,39 +190,22 @@ impl MonteCarloAgent {
                 // We act on the environment.
                 self.env.act(action.clone());
 
-                visited_state_action
+                self.visited_state_action
                     .entry((observation.clone(), action.clone()))
                     .and_modify(|count| *count += 1)
                     .or_insert(1);
 
                 // Record the trajectory.
                 let (reward, _, _) = self.env.observe();
-                states.push(observation);
-                actions.push(action);
-                rewards.push(reward);
+                trajectory.push((observation, action, reward));
 
                 if step > 0 && first {
                     break;
                 }
                 step += 1;
             }
-
-            // At each end of episode we update or action value.
-
-            let episode_return = rewards.iter().sum::<f64>();
-            // We iter over the trajectory.
-            for step in 0..rewards.len() {
-                let state = &states[step];
-                let action = &actions[step];
-
-                let alpha =
-                    1. / visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
-
-                self.action_value
-                    .entry((state.clone(), action.clone()))
-                    .and_modify(|value| *value = *value + alpha * (episode_return - *value))
-                    .or_insert(0.);
-            }
+            // At each end of episode we update our action-value function.
+            self.update_state_value(trajectory);
         }
     }
 }

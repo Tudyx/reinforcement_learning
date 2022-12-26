@@ -66,6 +66,8 @@ struct Observe<O> {
     first: bool,
 }
 
+pub type Reward = f64;
+
 // inspired de gym3 API.
 // la gym3 api ne gere pas les terminated observation.
 // y'a un décalage contre intuitif dans l'observation.
@@ -79,7 +81,7 @@ pub trait Environment {
 
     /// (Reward, observation first)
     /// The reward correspond to the previous action (not taken from the current observation)
-    fn observe(&self) -> (f64, Self::Observation, bool);
+    fn observe(&self) -> (Reward, Self::Observation, bool);
 
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.
