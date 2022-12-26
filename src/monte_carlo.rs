@@ -16,52 +16,14 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
-// Save the state value function
-fn save(state_value: Array2<f64>) {
-    let state_value = serde_json::to_value(state_value).unwrap();
-
-    let path = "/home/teddy/dev/python/easy21_plot/value_function.json";
-
-    let mut output = File::create(path).unwrap();
-    write!(output, "{}", serde_json::to_string(&state_value).unwrap()).unwrap();
-}
-
 /// Retex:
 /// Ord n'est pas implémenter pour f64!
 
+/// Number of episodes we will do to polish our estimation.
 const NUM_EPISODE: usize = 100_000;
 
+/// Define how much we explore.
 const N_0: f64 = 100.;
-
-// TODO: try to have the same result than matplotlib.
-fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
-    let root = BitMapBackend::new("images/3d-surface.png", (640, 480)).into_drawing_area();
-
-    root.fill(&WHITE).unwrap();
-
-    let mut chart = ChartBuilder::on(&root)
-        .margin(20)
-        .caption("3D Surface", ("sans-serif", 40))
-        .build_cartesian_3d(1.0..10.0, -1.0..1.0, 21.0..1.0)
-        .unwrap();
-
-    chart.configure_axes().draw().unwrap();
-
-    // More or less the equivalent of matplotlib `plot_surface`
-    // chart.draw_series(SurfaceSeries::xoz(a, b, f));
-    chart
-        .draw_series(LineSeries::new(
-            action_value.iter().map(|((observation, _), reward)| {
-                (
-                    observation.bank_sum as f64,
-                    *reward,
-                    observation.player_sum as f64,
-                )
-            }),
-            &RED,
-        ))
-        .unwrap();
-}
 
 struct MonteCarloAgent {
     /// Our action-value function (q value)  that we will try to estimate.
@@ -81,7 +43,7 @@ impl MonteCarloAgent {
         }
     }
 
-    fn random_policy() -> Action {
+    fn choose_random_action() -> Action {
         if random() {
             Action::Stick
         } else {
@@ -89,7 +51,7 @@ impl MonteCarloAgent {
         }
     }
 
-    fn greedy_policy(&self, observation: &Observation) -> Action {
+    fn choose_greedy_action(&self, observation: &Observation) -> Action {
         let stick_value = self
             .action_value
             .get(&(observation.clone(), Action::Stick))
@@ -104,6 +66,20 @@ impl MonteCarloAgent {
             Action::Stick
         } else {
             Action::Hit
+        }
+    }
+
+    fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
+        // The more we have visited the state, the more epsilon will be small and the more
+        // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
+        // the state, the more we explore.
+        let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
+        let exploring_prob = 1. - epsilon;
+
+        if thread_rng().gen::<f64>() < exploring_prob {
+            Self::choose_random_action()
+        } else {
+            self.choose_greedy_action(&observation)
         }
     }
 
@@ -155,17 +131,7 @@ impl MonteCarloAgent {
                     .and_modify(|count| *count += 1)
                     .or_insert(1);
 
-                // The more we have visited the state, the more epsilon will be small and the more
-                // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
-                // the state, the more we explore.
-                let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
-                let exploring_prob = 1. - epsilon;
-
-                let action = if thread_rng().gen::<f64>() < exploring_prob {
-                    Self::random_policy()
-                } else {
-                    self.greedy_policy(&observation)
-                };
+                let action = self.epsilon_greedy_policy(&observation);
 
                 // We act on the environment.
                 self.env.act(action.clone());
@@ -205,6 +171,48 @@ impl MonteCarloAgent {
             }
         }
     }
+}
+
+// Some helper function
+
+// TODO: try to have the same result than matplotlib.
+fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
+    let root = BitMapBackend::new("images/3d-surface.png", (640, 480)).into_drawing_area();
+
+    root.fill(&WHITE).unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .margin(20)
+        .caption("3D Surface", ("sans-serif", 40))
+        .build_cartesian_3d(1.0..10.0, -1.0..1.0, 21.0..1.0)
+        .unwrap();
+
+    chart.configure_axes().draw().unwrap();
+
+    // More or less the equivalent of matplotlib `plot_surface`
+    // chart.draw_series(SurfaceSeries::xoz(a, b, f));
+    chart
+        .draw_series(LineSeries::new(
+            action_value.iter().map(|((observation, _), reward)| {
+                (
+                    observation.bank_sum as f64,
+                    *reward,
+                    observation.player_sum as f64,
+                )
+            }),
+            &RED,
+        ))
+        .unwrap();
+}
+
+// Save the state value function
+fn save(state_value: Array2<f64>) {
+    let state_value = serde_json::to_value(state_value).unwrap();
+
+    let path = "/home/teddy/dev/python/easy21_plot/value_function.json";
+
+    let mut output = File::create(path).unwrap();
+    write!(output, "{}", serde_json::to_string(&state_value).unwrap()).unwrap();
 }
 
 fn main() {
