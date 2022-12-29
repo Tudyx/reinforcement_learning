@@ -28,6 +28,7 @@ const EPISODE_PRINT: u64 = 10_000;
 /// Represent a trajectory of through an episode.
 // Use a struct of array instead of an array of struct for efficiency.
 // TODO: benchmark to be sure its more efficient.
+#[derive(Debug)]
 struct Trajectory {
     states: Vec<Observation>,
     actions: Vec<Action>,
@@ -89,9 +90,9 @@ struct MonteCarloAgent {
 impl MonteCarloAgent {
     fn new(env: Easy21) -> Self {
         Self {
-            action_value: HashMap::new(),
-            visited_states: HashMap::new(),
-            visited_state_action: HashMap::new(),
+            action_value: HashMap::with_capacity(10 * 21 * 2),
+            visited_states: HashMap::with_capacity(10 * 21),
+            visited_state_action: HashMap::with_capacity(10 * 21 * 2),
             env,
         }
     }
@@ -104,6 +105,16 @@ impl MonteCarloAgent {
         for (state, action, reward) in trajectory.iter_rev() {
             // The cumultated reward we have from that state action pair.
             cumulated_reward += reward;
+
+            self.visited_states
+                .entry(state.clone())
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
+
+            self.visited_state_action
+                .entry((state.clone(), action.clone()))
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
 
             let alpha =
                 1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
@@ -137,9 +148,6 @@ impl MonteCarloAgent {
             .get(&(observation.clone(), Action::Hit))
             .unwrap_or(&0.);
 
-        dbg!(hit_value);
-        dbg!(stick_value);
-
         if stick_value > hit_value {
             Action::Stick
         } else {
@@ -150,7 +158,7 @@ impl MonteCarloAgent {
     /// We explore the state space with a probability of epsilon. Otherwise we take a greddy action (the best we can).
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
         // The less we have seen a state, the more we explore.
-        let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
+        let epsilon = N_0 / (N_0 + *self.visited_states.get(observation).unwrap_or(&0) as f64);
 
         if thread_rng().gen::<f64>() <= epsilon {
             // Exploration.
@@ -204,20 +212,10 @@ impl MonteCarloAgent {
                 // We observe the environment.
                 let (_, observation, _) = self.env.observe();
 
-                self.visited_states
-                    .entry(observation.clone())
-                    .and_modify(|count| *count += 1)
-                    .or_insert(1);
-
                 let action = self.epsilon_greedy_policy(&observation);
 
                 // We act on the environment.
                 self.env.act(action.clone());
-
-                self.visited_state_action
-                    .entry((observation.clone(), action.clone()))
-                    .and_modify(|count| *count += 1)
-                    .or_insert(1);
 
                 // Record the trajectory.
                 let (reward, _, first) = self.env.observe();
@@ -244,7 +242,6 @@ impl MonteCarloAgent {
 
             if episode % EPISODE_PRINT == 0 {
                 println!("------------------------");
-                dbg!(&trajectory.rewards);
                 println!("Episode {}", episode,);
                 println!("wins {:.2}%", (wins as f64) / (episode as f64 + 1.) * 100.);
                 println!(
@@ -306,7 +303,7 @@ fn save(state_value: Array2<f64>) {
 
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 1_000_000;
+    const NUM_EPISODE: u64 = 50_000_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
     mc_agent.train(NUM_EPISODE);
