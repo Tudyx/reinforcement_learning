@@ -7,6 +7,7 @@
 // TODO: benchmark le passage de Copy a CLone
 // TODO: benchmark si jamais je passe des reference pour le lookup.
 
+use itertools::izip;
 use ndarray::{Array, Array2};
 use plotters::prelude::*;
 use rand::prelude::*;
@@ -15,7 +16,6 @@ use rust_gym::Environment;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-
 /// Retex:
 /// Ord n'est pas implémenter pour f64!
 
@@ -59,6 +59,12 @@ impl Trajectory {
     fn cumulated_reward(&self) -> f64 {
         self.rewards.iter().sum()
     }
+
+    /// Iter on the trajectory in the reverse order.
+    fn iter_rev(&self) -> impl Iterator<Item = (&Observation, &Action, &f64)> {
+        izip!(&self.states, &self.actions, &self.rewards).rev()
+    }
+
     /// Iterate over states and action
     fn iter(&self) -> impl Iterator<Item = (&Observation, &Action)> {
         self.states.iter().zip(self.actions.iter())
@@ -87,15 +93,19 @@ impl MonteCarloAgent {
     }
     /// Update the action-value function from the given trajectory.
     fn update_action_value(&mut self, trajectory: Trajectory) {
-        let episode_return = trajectory.cumulated_reward();
+        let mut cumulated_reward = 0.;
 
-        for (state, action) in trajectory.iter() {
+        // We iterated in the reverse order!
+        for (state, action, reward) in trajectory.iter_rev() {
+            // The cumultated reward we have from that state action pair.
+            cumulated_reward += reward;
+
             let alpha =
                 1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
 
             self.action_value
                 .entry((state.clone(), action.clone()))
-                .and_modify(|value| *value = *value + alpha * (episode_return - *value))
+                .and_modify(|value| *value = *value + alpha * (cumulated_reward - *value))
                 .or_insert(0.);
         }
     }
@@ -130,7 +140,7 @@ impl MonteCarloAgent {
     /// We take a greedy action with a probability of epsilon. Otherwise we take a random action.
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
         // The more we have visited the state, the more epsilon will be small and the more
-        // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
+        // we will take greedy actions (probability epsilon) (we don't explore). The less we have seen
         // the state, the more we explore.
         let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
 
@@ -140,7 +150,9 @@ impl MonteCarloAgent {
             Self::choose_random_action()
         }
     }
+    fn print_policy(&self) {}
 
+    /// We compute the estimated state value function from the estimated action value function.
     fn compute_state_value_function(&self) -> Array2<f64> {
         let mut state_value = Array::zeros((21, 10));
 
@@ -168,7 +180,7 @@ impl MonteCarloAgent {
         state_value
     }
 
-    fn learn_action_value_fuction(&mut self, num_episode: u64) {
+    fn learn_action_value_function(&mut self, num_episode: u64) {
         for _ in 0..num_episode {
             // We record the trajectory of the episode.
             let mut trajectory = Trajectory::new();
@@ -255,7 +267,9 @@ fn main() {
     const NUM_EPISODE: u64 = 100_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
-    mc_agent.learn_action_value_fuction(NUM_EPISODE);
+    mc_agent.learn_action_value_function(NUM_EPISODE);
     let state_value = mc_agent.compute_state_value_function();
+
+    // println!("{}", state_value);
     save(state_value);
 }

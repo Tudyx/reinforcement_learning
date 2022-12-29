@@ -15,6 +15,7 @@ path = "src/monte_carlo.rs"
 
 [dependencies]
 anyhow = "1.0.68"
+itertools = "0.10.5"
 ndarray = { version = "0.15.6", features = ["serde"] }
 ndarray-rand = "0.14.0"
 plotters = "0.3.4"
