@@ -52,7 +52,7 @@ impl Environment for Easy21 {
             Action::Hit => {
                 self.player_sum += self.draw_card();
                 if self.is_player_busted() {
-                    println!("Player Busted! ({})", self.player_sum);
+                    // println!("Player Busted! ({})", self.player_sum);
                     self.last_reward = -1.;
                     self.reset();
                 } else {
@@ -62,12 +62,12 @@ impl Environment for Easy21 {
             // End of the game.
             Action::Stick => {
                 // The dealer play until to have at least a sum superior or equal to 17.
-                while self.bank_sum < 17 {
+                while self.bank_sum < 17 && self.bank_sum > 0 {
                     self.bank_sum += self.draw_card();
                 }
 
                 if self.is_bank_busted() {
-                    println!("Bank Busted! ({})", self.bank_sum);
+                    // println!("Bank Busted! ({})", self.bank_sum);
                     self.last_reward = 1.;
                 } else {
                     match self.player_sum.cmp(&self.bank_sum) {
@@ -89,8 +89,8 @@ impl Environment for Easy21 {
         };
 
         if !self.first {
-            println!("Player score {}", self.player_sum);
-            println!("Bank score {}", self.bank_sum);
+            // println!("Player score {}", self.player_sum);
+            // println!("Bank score {}", self.bank_sum);
         }
 
         (self.last_reward, observation, self.first)
