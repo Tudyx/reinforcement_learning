@@ -1,7 +1,8 @@
 //! Monte Carlo agent.
 //! There is no discouting factor for the Easy21 assignement.
 //!
-//!
+//! A lot of onlin implementation seems to have errors.
+//! This one seems to be good https://github.com/hereismari/easy21/blob/master/easy21.ipynb
 
 // FIXME: in the plot we are not enought close to one.
 // TODO: benchmark le passage de Copy a CLone
@@ -71,12 +72,13 @@ impl Trajectory {
     }
 }
 
+/// An agent using Monte Carlo control to find the best policy.
 struct MonteCarloAgent {
-    /// Our action-value function (q value)  that we will try to estimate.
+    /// Our action-value function (Q value) that we will try to improve towards Q*(s, a).
     action_value: HashMap<(Observation, Action), f64>,
     /// The N(s) function. Give number of time we have visited a state.
     visited_states: HashMap<Observation, i32>,
-    // The N(s,a) function. Give the nimber of time we have visited a couple action state.
+    // The N(s,a) function. Give the number of time we have visited a couple action state.
     visited_state_action: HashMap<(Observation, Action), u64>,
     /// The underlying environment.
     env: Easy21,
@@ -91,7 +93,8 @@ impl MonteCarloAgent {
             env,
         }
     }
-    /// Update the action-value function from the given trajectory.
+
+    /// Improve the action-value function approximation towards Q*(s, a) from the given trajectory.
     fn update_action_value(&mut self, trajectory: Trajectory) {
         let mut cumulated_reward = 0.;
 
@@ -103,9 +106,11 @@ impl MonteCarloAgent {
             let alpha =
                 1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
 
+            // We adjust the Q value towards the reality (observed) minus what we estimated.
+            // This term is usually descrived as the error term.
             self.action_value
                 .entry((state.clone(), action.clone()))
-                .and_modify(|value| *value = *value + alpha * (cumulated_reward - *value))
+                .and_modify(|value| *value += alpha * (cumulated_reward - *value))
                 .or_insert(0.);
         }
     }
@@ -137,17 +142,17 @@ impl MonteCarloAgent {
         }
     }
 
-    /// We take a greedy action with a probability of epsilon. Otherwise we take a random action.
+    /// We explore the state space with a probability of epsilon. Otherwise we take a greddy action (the best we can).
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
         // The more we have visited the state, the more epsilon will be small and the more
-        // we will take greedy actions (probability epsilon) (we don't explore). The less we have seen
+        // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
         // the state, the more we explore.
         let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
 
-        if thread_rng().gen::<f64>() < epsilon {
-            self.choose_greedy_action(&observation)
-        } else {
+        if thread_rng().gen::<f64>() <= epsilon {
             Self::choose_random_action()
+        } else {
+            self.choose_greedy_action(&observation)
         }
     }
     fn print_policy(&self) {}
