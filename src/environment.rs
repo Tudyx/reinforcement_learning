@@ -35,19 +35,10 @@ pub enum Fooz {
     Contiguous,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Metadata {
     pub render_modes: Vec<RenderMode>,
     pub render_fps: usize,
-}
-
-impl Default for Metadata {
-    fn default() -> Self {
-        Self {
-            render_modes: vec![],
-            render_fps: 0,
-        }
-    }
 }
 
 #[derive(Debug)]

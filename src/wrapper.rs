@@ -54,7 +54,7 @@ impl Environment for TimingEnv {
     }
 
     fn observe(&self) -> (f64, Self::Observation, bool) {
-        let first = if self.steps == 0 { true } else { false };
+        let first = self.steps == 0;
 
         (0.0, (), first)
     }

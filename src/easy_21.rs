@@ -23,7 +23,7 @@ pub struct Easy21 {
 // Range where the sum of the cards is valid.
 const CARDS_RANGE: RangeInclusive<i8> = 1..=21;
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Copy)]
 pub enum Action {
     /// Take a new card.
     Hit,
@@ -31,7 +31,7 @@ pub enum Action {
     Stick,
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Copy)]
 pub struct Observation {
     /// Sum of the player cards.
     pub player_sum: i8,
@@ -120,7 +120,7 @@ impl Easy21 {
         if thread_rng().gen::<f64>() < (2. / 3.) {
             card
         } else {
-            -1 * card
+            -card
         }
     }
     fn is_player_busted(&self) -> bool {

@@ -58,20 +58,9 @@ impl Trajectory {
         self.rewards.push(step.2);
     }
 
-    /// Return the episode *return* A.K.A. the cumulated reward.
-    /// No discount factor is applied.
-    fn cumulated_reward(&self) -> f64 {
-        self.rewards.iter().sum()
-    }
-
     /// Iter on the trajectory in the reverse order.
     fn iter_rev(&self) -> impl Iterator<Item = (&Observation, &Action, &f64)> {
         izip!(&self.states, &self.actions, &self.rewards).rev()
-    }
-
-    /// Iterate over states and action
-    fn iter(&self) -> impl Iterator<Item = (&Observation, &Action)> {
-        self.states.iter().zip(self.actions.iter())
     }
 }
 
@@ -107,12 +96,12 @@ impl MonteCarloAgent {
             cumulated_reward += reward;
 
             self.visited_states
-                .entry(state.clone())
+                .entry(*state)
                 .and_modify(|count| *count += 1)
                 .or_insert(1);
 
             self.visited_state_action
-                .entry((state.clone(), action.clone()))
+                .entry((*state, *action))
                 .and_modify(|count| *count += 1)
                 .or_insert(1);
 
@@ -122,7 +111,7 @@ impl MonteCarloAgent {
             // We adjust the Q value towards the reality (observed) minus what we estimated.
             // This term is usually descrived as the error term.
             self.action_value
-                .entry((state.clone(), action.clone()))
+                .entry((*state, *action))
                 .and_modify(|value| *value += alpha * (cumulated_reward - *value))
                 .or_insert(0.);
         }
@@ -140,12 +129,12 @@ impl MonteCarloAgent {
     fn choose_greedy_action(&self, observation: &Observation) -> Action {
         let stick_value = self
             .action_value
-            .get(&(observation.clone(), Action::Stick))
+            .get(&(*observation, Action::Stick))
             .unwrap_or(&0.);
 
         let hit_value = self
             .action_value
-            .get(&(observation.clone(), Action::Hit))
+            .get(&(*observation, Action::Hit))
             .unwrap_or(&0.);
 
         if stick_value > hit_value {
@@ -165,7 +154,7 @@ impl MonteCarloAgent {
             Self::choose_random_action()
         } else {
             // Exploitation.
-            self.choose_greedy_action(&observation)
+            self.choose_greedy_action(observation)
         }
     }
 
@@ -173,15 +162,15 @@ impl MonteCarloAgent {
     fn compute_state_value_function(&self) -> Array2<f64> {
         let mut state_value = Array::zeros((21, 10));
 
-        for (observation, _) in &self.visited_states {
+        for observation in self.visited_states.keys() {
             let stick_value = self
                 .action_value
-                .get(&(observation.clone(), Action::Stick))
+                .get(&(*observation, Action::Stick))
                 .unwrap_or(&0.);
 
             let hit_value = self
                 .action_value
-                .get(&(observation.clone(), Action::Hit))
+                .get(&(*observation, Action::Hit))
                 .unwrap_or(&0.);
 
             let max_q_value = if stick_value > hit_value {
@@ -215,7 +204,7 @@ impl MonteCarloAgent {
                 let action = self.epsilon_greedy_policy(&observation);
 
                 // We act on the environment.
-                self.env.act(action.clone());
+                self.env.act(action);
 
                 // Record the trajectory.
                 let (reward, _, first) = self.env.observe();
@@ -286,7 +275,7 @@ fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
                     observation.player_sum as f64,
                 )
             }),
-            &RED,
+            RED,
         ))
         .unwrap();
 }
