@@ -7,15 +7,34 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'rust_gym'",
+            "name": "Debug unit tests in library 'rust_gym'",
             "cargo": {
                 "args": [
-                    "build",
-                    "--bin=rust_gym",
+                    "test",
+                    "--no-run",
+                    "--lib",
                     "--package=rust_gym"
                 ],
                 "filter": {
                     "name": "rust_gym",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'interactive'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=interactive",
+                    "--package=rust_gym"
+                ],
+                "filter": {
+                    "name": "interactive",
                     "kind": "bin"
                 }
             },
@@ -25,16 +44,53 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'rust_gym'",
+            "name": "Debug unit tests in executable 'interactive'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=rust_gym",
+                    "--bin=interactive",
                     "--package=rust_gym"
                 ],
                 "filter": {
-                    "name": "rust_gym",
+                    "name": "interactive",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'mc'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=mc",
+                    "--package=rust_gym"
+                ],
+                "filter": {
+                    "name": "mc",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'mc'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=mc",
+                    "--package=rust_gym"
+                ],
+                "filter": {
+                    "name": "mc",
                     "kind": "bin"
                 }
             },

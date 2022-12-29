@@ -121,7 +121,7 @@ impl Environment for Easy21 {
             Action::Hit => {
                 self.player_cards.push(Card::new_random());
                 if self.is_player_busted() {
-                    println!("Player Busted! ({})", self.player_cards.sum());
+                    // println!("Player Busted! ({})", self.player_cards.sum());
                     self.winner = Winner::Bank;
                     self.reset();
                 }
@@ -134,7 +134,7 @@ impl Environment for Easy21 {
                 }
 
                 if self.is_bank_busted() {
-                    println!("Bank Busted! ({})", self.bank_cards.sum());
+                    // println!("Bank Busted! ({})", self.bank_cards.sum());
                     self.winner = Winner::Player;
                 } else {
                     match self.player_cards.sum().cmp(&self.bank_cards.sum()) {
@@ -156,8 +156,8 @@ impl Environment for Easy21 {
         };
 
         if !self.first {
-            println!("Player score {}", self.player_cards.sum());
-            println!("Bank score {}", self.bank_cards.sum());
+            // println!("Player score {}", self.player_cards.sum());
+            // println!("Bank score {}", self.bank_cards.sum());
         }
 
         let reward = match self.winner {

@@ -40,6 +40,7 @@ impl Interactive {
     }
 
     fn update(&mut self) -> anyhow::Result<()> {
+        println!("Enter action:");
         let action = self.retrieve_key_pressed()?;
         let first = self.act(action);
 

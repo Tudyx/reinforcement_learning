@@ -22,6 +22,8 @@ use std::io::Write;
 
 /// Define how much we explore.
 const N_0: f64 = 100.;
+/// Print status every x episode.
+const EPISODE_PRINT: u64 = 10_000;
 
 /// Represent a trajectory of through an episode.
 // Use a struct of array instead of an array of struct for efficiency.
@@ -135,6 +137,9 @@ impl MonteCarloAgent {
             .get(&(observation.clone(), Action::Hit))
             .unwrap_or(&0.);
 
+        dbg!(hit_value);
+        dbg!(stick_value);
+
         if stick_value > hit_value {
             Action::Stick
         } else {
@@ -185,14 +190,19 @@ impl MonteCarloAgent {
     }
 
     fn train(&mut self, num_episode: u64) {
-        for _ in 0..num_episode {
+        // Number of episode the agent has won.
+        let mut wins = 0;
+
+        let mut equalities = 0;
+        let mut looses = 0;
+
+        for episode in 0..num_episode {
             // We record the trajectory of the episode.
             let mut trajectory = Trajectory::new();
-            let mut step = 0;
 
             loop {
                 // We observe the environment.
-                let (_, observation, first) = self.env.observe();
+                let (_, observation, _) = self.env.observe();
 
                 self.visited_states
                     .entry(observation.clone())
@@ -210,13 +220,41 @@ impl MonteCarloAgent {
                     .or_insert(1);
 
                 // Record the trajectory.
-                let (reward, _, _) = self.env.observe();
+                let (reward, _, first) = self.env.observe();
+
+                // dbg!((&observation, &action, &reward, first));
+
+                assert!(!trajectory.rewards.contains(&1.0));
+                assert!(!trajectory.rewards.contains(&-1.0));
                 trajectory.push((observation, action, reward));
 
-                if step > 0 && first {
+                if first {
+                    if reward == 1. {
+                        wins += 1;
+                    } else if reward == -1. {
+                        looses += 1;
+                    } else {
+                        equalities += 1;
+
+                        assert_eq!(reward, 0.0)
+                    }
                     break;
                 }
-                step += 1;
+            }
+
+            if episode % EPISODE_PRINT == 0 {
+                println!("------------------------");
+                dbg!(&trajectory.rewards);
+                println!("Episode {}", episode,);
+                println!("wins {:.2}%", (wins as f64) / (episode as f64 + 1.) * 100.);
+                println!(
+                    "Loose {:.2}%",
+                    (looses as f64) / (episode as f64 + 1.) * 100.
+                );
+                println!(
+                    "equalities {:.2}%",
+                    (equalities as f64) / (episode as f64 + 1.) * 100.
+                );
             }
             // At each end of episode we update our action-value function.
             self.update_action_value(trajectory);
@@ -268,7 +306,7 @@ fn save(state_value: Array2<f64>) {
 
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 500_000;
+    const NUM_EPISODE: u64 = 1_000_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
     mc_agent.train(NUM_EPISODE);
