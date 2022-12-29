@@ -7,81 +7,22 @@
 
 use crate::Environment;
 use rand::prelude::*;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ops::RangeInclusive};
 
 // TODO: explore the "last_observe" pattern
 // <https://github.com/christopher-hesse/computer-tennis/blob/9f8aeacf5240d616179fdadc4fc50c9fb15987b7/computer_tennis/env.py#L150>
 
 /// Simplified version of BlackJack.
 pub struct Easy21 {
-    player_cards: Cards,
-    bank_cards: Cards,
+    player_sum: i8,
+    bank_sum: i8,
     winner: Winner,
     first: bool,
     last_reward: f64, //TODO: explore this pattern
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-struct Cards(Vec<Card>);
-
-impl Cards {
-    fn sum(&self) -> i32 {
-        self.0
-            .iter()
-            .map(|card| match card.color {
-                Color::Black => card.number as i32,
-                Color::Red => -1 * card.number as i32,
-            })
-            .sum()
-    }
-
-    fn is_busted(&self) -> bool {
-        !(1..=21).contains(&self.sum())
-    }
-
-    fn push(&mut self, card: Card) {
-        self.0.push(card);
-    }
-}
-
-impl Default for Cards {
-    /// At the start of the game both the player and the dealer draw one black
-    /// card (fully observed)
-    fn default() -> Self {
-        Self(vec![Card {
-            color: Color::Black,
-            number: thread_rng().gen_range(1..=10),
-        }])
-    }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Card {
-    number: u8,
-    color: Color,
-}
-
-impl Card {
-    fn new_random() -> Self {
-        //  Red has a probability of 1/3 and black 2/3.
-        let color = match thread_rng().gen_range(1..=3) {
-            1 => Color::Red,
-            2..=3 => Color::Black,
-            _ => unreachable!(),
-        };
-
-        Self {
-            number: thread_rng().gen_range(1..=10),
-            color,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub enum Color {
-    Red,
-    Black,
-}
+// Range where the sum of the cards is valid.
+const CARDS_RANGE: RangeInclusive<i8> = 1..=21;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Action {
@@ -94,9 +35,9 @@ pub enum Action {
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Observation {
     /// Sum of the player cards.
-    pub player_sum: i32,
+    pub player_sum: i8,
     /// Sum of the bank cards.
-    pub bank_sum: i32,
+    pub bank_sum: i8,
 }
 
 #[derive(Debug)]
@@ -119,9 +60,9 @@ impl Environment for Easy21 {
 
         match action {
             Action::Hit => {
-                self.player_cards.push(Card::new_random());
+                self.player_sum += self.draw_card();
                 if self.is_player_busted() {
-                    // println!("Player Busted! ({})", self.player_cards.sum());
+                    // println!("Player Busted! ({})", self.player_sum);
                     self.winner = Winner::Bank;
                     self.reset();
                 }
@@ -129,15 +70,15 @@ impl Environment for Easy21 {
             // End of the game.
             Action::Stick => {
                 // The dealer play until to have at least a sum superior or equal to 17.
-                while self.bank_cards.sum() < 17 {
-                    self.bank_cards.push(Card::new_random());
+                while self.bank_sum < 17 {
+                    self.bank_sum += self.draw_card();
                 }
 
                 if self.is_bank_busted() {
-                    // println!("Bank Busted! ({})", self.bank_cards.sum());
+                    // println!("Bank Busted! ({})", self.bank_sum);
                     self.winner = Winner::Player;
                 } else {
-                    match self.player_cards.sum().cmp(&self.bank_cards.sum()) {
+                    match self.player_sum.cmp(&self.bank_sum) {
                         Ordering::Less => self.winner = Winner::Bank,
                         Ordering::Equal => self.winner = Winner::Equality,
                         Ordering::Greater => self.winner = Winner::Player,
@@ -151,13 +92,13 @@ impl Environment for Easy21 {
 
     fn observe(&self) -> (f64, Self::Observation, bool) {
         let observation = Observation {
-            player_sum: self.player_cards.sum(),
-            bank_sum: self.bank_cards.sum(),
+            player_sum: self.player_sum,
+            bank_sum: self.bank_sum,
         };
 
         if !self.first {
-            // println!("Player score {}", self.player_cards.sum());
-            // println!("Bank score {}", self.bank_cards.sum());
+            // println!("Player score {}", self.player_sum);
+            // println!("Bank score {}", self.bank_sum);
         }
 
         let reward = match self.winner {
@@ -178,8 +119,8 @@ impl Environment for Easy21 {
 impl Default for Easy21 {
     fn default() -> Self {
         Self {
-            player_cards: Cards::default(),
-            bank_cards: Cards::default(),
+            player_sum: thread_rng().gen_range(1..=10),
+            bank_sum: thread_rng().gen_range(1..=10),
             winner: Winner::Unknown,
             first: true,
             last_reward: 0.0,
@@ -188,19 +129,30 @@ impl Default for Easy21 {
 }
 
 impl Easy21 {
+    // Red has a probability of 1/3 and black 2/3.
+    // Red are deduce from the total, black are added.
+    fn draw_card(&self) -> i8 {
+        let card = thread_rng().gen_range(1..=10);
+        if thread_rng().gen::<f64>() < (2. / 3.) {
+            card
+        } else {
+            -1 * card
+        }
+    }
     fn is_player_busted(&self) -> bool {
-        self.player_cards.is_busted()
+        !CARDS_RANGE.contains(&self.player_sum)
     }
 
     fn is_bank_busted(&self) -> bool {
-        self.bank_cards.is_busted()
+        !CARDS_RANGE.contains(&self.bank_sum)
     }
 
     /// we reset everything except the winner, because we need it for the next observation
     /// to compute the reward.
+    /// The player and th bank get one black card.
     fn reset(&mut self) {
-        self.player_cards = Cards::default();
-        self.bank_cards = Cards::default();
+        self.bank_sum = thread_rng().gen_range(1..=10);
+        self.player_sum = thread_rng().gen_range(1..=10);
         self.first = true;
     }
 }
@@ -210,32 +162,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sum() {
-        let cards = Cards(vec![
-            Card {
-                color: Color::Black,
-                number: 10,
-            },
-            Card {
-                color: Color::Red,
-                number: 2,
-            },
-        ]);
-
-        assert_eq!(cards.sum(), 8);
-    }
-
-    #[test]
     fn color_distribution() {
         const CARD_NUMBER: u64 = 100_000;
         let mut num_red_cards = 0;
         let mut num_black_cards = 0;
 
+        let env = Easy21::default();
+
         for _ in 0..CARD_NUMBER {
-            let card = Card::new_random();
-            match card.color {
-                Color::Red => num_red_cards += 1,
-                Color::Black => num_black_cards += 1,
+            let card = env.draw_card();
+
+            if card.is_positive() {
+                num_black_cards += 1;
+            } else {
+                num_red_cards += 1;
             }
         }
 
