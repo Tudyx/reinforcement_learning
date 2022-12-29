@@ -146,6 +146,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn sum_validity_domain() {
+        let mut env = Easy21::default();
+
+        for _ in 0..1000 {
+            assert!(!env.is_bank_busted());
+            assert!(!env.is_player_busted());
+            if rand::random() {
+                env.act(Action::Hit);
+            } else {
+                env.act(Action::Stick);
+            }
+        }
+    }
+
+    #[test]
     fn color_distribution() {
         const CARD_NUMBER: u64 = 100_000;
         let mut num_red_cards = 0;

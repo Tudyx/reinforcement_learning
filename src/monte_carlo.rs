@@ -4,9 +4,9 @@
 //! A lot of onlin implementation seems to have errors.
 //! This one seems to be good https://github.com/hereismari/easy21/blob/master/easy21.ipynb
 
-// FIXME: in the plot we are not enought close to one.
 // TODO: benchmark le passage de Copy a CLone
 // TODO: benchmark si jamais je passe des reference pour le lookup.
+// TODO: benchmark si jamais je test le vec env.
 
 use itertools::izip;
 use ndarray::{Array, Array2};
@@ -222,8 +222,8 @@ impl MonteCarloAgent {
 
                 // dbg!((&observation, &action, &reward, first));
 
-                assert!(!trajectory.rewards.contains(&1.0));
-                assert!(!trajectory.rewards.contains(&-1.0));
+                debug_assert!(!trajectory.rewards.contains(&1.0));
+                debug_assert!(!trajectory.rewards.contains(&-1.0));
                 trajectory.push((observation, action, reward));
 
                 if first {
@@ -234,7 +234,7 @@ impl MonteCarloAgent {
                     } else {
                         equalities += 1;
 
-                        assert_eq!(reward, 0.0)
+                        debug_assert_eq!(reward, 0.0)
                     }
                     break;
                 }
@@ -303,7 +303,7 @@ fn save(state_value: Array2<f64>) {
 
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 50_000_000;
+    const NUM_EPISODE: u64 = 5_000_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
     mc_agent.train(NUM_EPISODE);
