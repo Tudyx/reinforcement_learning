@@ -16,7 +16,6 @@ use std::{cmp::Ordering, ops::RangeInclusive};
 pub struct Easy21 {
     player_sum: i8,
     bank_sum: i8,
-    winner: Winner,
     first: bool,
     last_reward: f64, //TODO: explore this pattern
 }
@@ -40,21 +39,12 @@ pub struct Observation {
     pub bank_sum: i8,
 }
 
-#[derive(Debug)]
-pub enum Winner {
-    Unknown,
-    Player,
-    Bank,
-    Equality,
-}
-
 impl Environment for Easy21 {
     type Action = Action;
     type Observation = Observation;
 
     fn act(&mut self, action: Self::Action) {
         if self.first {
-            self.winner = Winner::Unknown;
             self.first = false;
         }
 
@@ -62,9 +52,11 @@ impl Environment for Easy21 {
             Action::Hit => {
                 self.player_sum += self.draw_card();
                 if self.is_player_busted() {
-                    // println!("Player Busted! ({})", self.player_sum);
-                    self.winner = Winner::Bank;
+                    println!("Player Busted! ({})", self.player_sum);
+                    self.last_reward = -1.;
                     self.reset();
+                } else {
+                    self.last_reward = 0.;
                 }
             }
             // End of the game.
@@ -75,13 +67,13 @@ impl Environment for Easy21 {
                 }
 
                 if self.is_bank_busted() {
-                    // println!("Bank Busted! ({})", self.bank_sum);
-                    self.winner = Winner::Player;
+                    println!("Bank Busted! ({})", self.bank_sum);
+                    self.last_reward = 1.;
                 } else {
                     match self.player_sum.cmp(&self.bank_sum) {
-                        Ordering::Less => self.winner = Winner::Bank,
-                        Ordering::Equal => self.winner = Winner::Equality,
-                        Ordering::Greater => self.winner = Winner::Player,
+                        Ordering::Less => self.last_reward = -1.,
+                        Ordering::Equal => self.last_reward = 0.,
+                        Ordering::Greater => self.last_reward = 1.,
                     }
                 }
                 // We reset the env here. (act is the only mutable function)
@@ -97,18 +89,11 @@ impl Environment for Easy21 {
         };
 
         if !self.first {
-            // println!("Player score {}", self.player_sum);
-            // println!("Bank score {}", self.bank_sum);
+            println!("Player score {}", self.player_sum);
+            println!("Bank score {}", self.bank_sum);
         }
 
-        let reward = match self.winner {
-            Winner::Unknown => 0.,
-            Winner::Equality => 0.,
-            Winner::Player => 1.,
-            Winner::Bank => -1.,
-        };
-
-        (reward, observation, self.first)
+        (self.last_reward, observation, self.first)
     }
 
     fn metadata() -> crate::environment::Metadata {
@@ -121,7 +106,6 @@ impl Default for Easy21 {
         Self {
             player_sum: thread_rng().gen_range(1..=10),
             bank_sum: thread_rng().gen_range(1..=10),
-            winner: Winner::Unknown,
             first: true,
             last_reward: 0.0,
         }
