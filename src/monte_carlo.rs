@@ -144,18 +144,17 @@ impl MonteCarloAgent {
 
     /// We explore the state space with a probability of epsilon. Otherwise we take a greddy action (the best we can).
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
-        // The more we have visited the state, the more epsilon will be small and the more
-        // we will take greedy actions (probability 1 - epsilon) (we don't explore). The less we have seen
-        // the state, the more we explore.
+        // The less we have seen a state, the more we explore.
         let epsilon = N_0 / (N_0 + self.visited_states[&observation] as f64);
 
         if thread_rng().gen::<f64>() <= epsilon {
+            // Exploration.
             Self::choose_random_action()
         } else {
+            // Exploitation.
             self.choose_greedy_action(&observation)
         }
     }
-    fn print_policy(&self) {}
 
     /// We compute the estimated state value function from the estimated action value function.
     fn compute_state_value_function(&self) -> Array2<f64> {
@@ -185,7 +184,7 @@ impl MonteCarloAgent {
         state_value
     }
 
-    fn learn_action_value_function(&mut self, num_episode: u64) {
+    fn train(&mut self, num_episode: u64) {
         for _ in 0..num_episode {
             // We record the trajectory of the episode.
             let mut trajectory = Trajectory::new();
@@ -269,10 +268,10 @@ fn save(state_value: Array2<f64>) {
 
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 100_000;
+    const NUM_EPISODE: u64 = 500_000;
     let env = Easy21::default();
     let mut mc_agent = MonteCarloAgent::new(env);
-    mc_agent.learn_action_value_function(NUM_EPISODE);
+    mc_agent.train(NUM_EPISODE);
     let state_value = mc_agent.compute_state_value_function();
 
     // println!("{}", state_value);
