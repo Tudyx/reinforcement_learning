@@ -1,10 +1,11 @@
 //! Monte Carlo agent.
 //! There is no discouting factor for the Easy21 assignement.
+//! The initial Q-value have no importance for this algorithm, we sjust replace the value the first time we see it.
 //!
-//! A lot of onlin implementation seems to have errors.
+//! A lot of online implementation seems to have errors.
 //! This one seems to be good https://github.com/hereismari/easy21/blob/master/easy21.ipynb
 
-// TODO: benchmark le passage de Copy a CLone
+// TODO: benchmark le passage de Copy a CLone -> change rien
 // TODO: benchmark si jamais je passe des reference pour le lookup.
 // TODO: benchmark si jamais je test le vec env.
 
