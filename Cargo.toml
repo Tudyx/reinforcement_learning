@@ -13,6 +13,14 @@ path = "src/interactive.rs"
 name = "mc"
 path = "src/monte_carlo.rs"
 
+[[bin]]
+name = "td"
+path = "src/td.rs"
+
+
+[profile.release]
+debug = true
+
 [dependencies]
 anyhow = "1.0.68"
 itertools = "0.10.5"

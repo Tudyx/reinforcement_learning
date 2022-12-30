@@ -27,6 +27,7 @@ where
     // marche pas avec l'abstraction actuelle:
 
     // Est-ce qu'il faut faire une autre abstraction genre VecEnv ?
+    // avoir un associated type Step pourrait être une bonne idée également.
 
     fn observe(&self) -> (crate::environment::Reward, Self::Observation, bool) {
         let mut observations = Vec::new();

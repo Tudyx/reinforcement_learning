@@ -1,31 +1,24 @@
-//! Monte Carlo agent.
-//! There is no discouting factor for the Easy21 assignement.
-//! The initial Q-value have no importance for this algorithm, we sjust replace the value the first time we see it.
+//! SARSA(lambda) agent using backward view.
 //!
-//! A lot of online implementation seems to have errors.
-//! This one seems to be good https://github.com/hereismari/easy21/blob/master/easy21.ipynb
-
-// TODO: benchmark le passage de Copy a CLone -> change rien
-// TODO: benchmark si jamais je passe des reference pour le lookup.
-// TODO: benchmark si jamais je test le vec env.
-// TODO: another alternative to hashmap for the action-value function could be to use a `Array3<f64>`. Hashmap is the perf bottleneck, but its more expressive.
+//! Is applying TD(lambda) backward view to the control problem.
+//!
+//! The backward view is used to allow the algorithm to be on-policy (updated on each step).
+//! For that, egibility traces are used, which give more credit to the state we have seen more recently and more frequently.
+//!
 
 use itertools::izip;
 use ndarray::{Array, Array2};
-use plotters::prelude::*;
 use rand::prelude::*;
 use rust_gym::easy_21::{Action, Easy21, Observation};
 use rust_gym::Environment;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-/// Retex:
-/// Ord n'est pas implémenter pour f64!
 
 /// Define how much we explore.
 const N_0: f64 = 100.;
 /// Print status every x episode.
-const EPISODE_PRINT: u64 = 10_000;
+const EPISODE_PRINT: u64 = 1000;
 
 /// Represent a trajectory of through an episode.
 // Use a struct of array instead of an array of struct for efficiency.
@@ -67,56 +60,38 @@ impl Trajectory {
 }
 
 /// An agent using Monte Carlo control to find the best policy.
-struct MonteCarloAgent {
+struct TdAgent {
     /// Our action-value function (Q value) that we will try to improve towards Q*(s, a).
     action_value: HashMap<(Observation, Action), f64>,
     /// The N(s) function. Give number of time we have visited a state.
     visited_states: HashMap<Observation, i32>,
-    // The N(s,a) function. Give the number of time we have visited a couple action state.
+    /// The N(s,a) function. Give the number of time we have visited a couple action state.
     visited_state_action: HashMap<(Observation, Action), u64>,
+    // The E(s,a) describe how much we should update the action-value.
+    // The more we have seen the state and the more recent it is, the more the eligibity trace will be big.
+    // We consider that state we have seen more recently and more frequently deserve to be more updated by the reward.
+    eligibility_traces: HashMap<(Observation, Action), f64>,
     /// The underlying environment.
     env: Easy21,
+    /// [0; 1] the more lamnda is big, the more we will give importance to past state in the reward contribution.
+    lambda: f64,
 }
 
-impl MonteCarloAgent {
-    fn new(env: Easy21) -> Self {
+impl TdAgent {
+    fn new(env: Easy21, lambda: f64) -> Self {
         Self {
             action_value: HashMap::with_capacity(10 * 21 * 2),
             visited_states: HashMap::with_capacity(10 * 21),
             visited_state_action: HashMap::with_capacity(10 * 21 * 2),
+            eligibility_traces: HashMap::with_capacity(10 * 21 * 2),
             env,
+            lambda,
         }
     }
 
-    /// Improve the action-value function approximation towards Q*(s, a) from the given trajectory.
-    fn update_action_value(&mut self, trajectory: Trajectory) {
-        let mut cumulated_reward = 0.;
-
-        // We iterated in the reverse order!
-        for (state, action, reward) in trajectory.iter_rev() {
-            // The cumultated reward we have from that state action pair.
-            cumulated_reward += reward;
-
-            self.visited_states
-                .entry(*state)
-                .and_modify(|count| *count += 1)
-                .or_insert(1);
-
-            self.visited_state_action
-                .entry((*state, *action))
-                .and_modify(|count| *count += 1)
-                .or_insert(1);
-
-            let alpha =
-                1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64;
-
-            // We adjust the Q value towards the reality (observed) minus what we estimated.
-            // This term is usually descrived as the error term.
-            self.action_value
-                .entry((*state, *action))
-                .and_modify(|value| *value += alpha * (cumulated_reward - *value))
-                .or_insert(0.);
-        }
+    // alpha, A.K.A.the step size.
+    fn compute_step_size(&self, state: &Observation, action: &Action) -> f64 {
+        1. / self.visited_state_action[&(state.to_owned(), action.to_owned())] as f64
     }
 
     fn choose_random_action() -> Action {
@@ -146,8 +121,7 @@ impl MonteCarloAgent {
         }
     }
 
-    /// We explore the state space with a probability of epsilon ε. Otherwise we take a greddy action, the one with the
-    /// biggest action-value.
+    /// We explore the state space with a probability of epsilon. Otherwise we take a greddy action (the best we can).
     fn epsilon_greedy_policy(&self, observation: &Observation) -> Action {
         // The less we have seen a state, the more we explore.
         let epsilon = N_0 / (N_0 + *self.visited_states.get(observation).unwrap_or(&0) as f64);
@@ -189,6 +163,22 @@ impl MonteCarloAgent {
         state_value
     }
 
+    fn compute_delta(
+        &mut self,
+        reward: f64,
+        next_observation: Observation,
+        next_action: Action,
+        observation: Observation,
+        action: Action,
+    ) -> f64 {
+        reward
+            + *self
+                .action_value
+                .entry((next_observation, next_action))
+                .or_insert(0.)
+            - *self.action_value.entry((observation, action)).or_insert(0.)
+    }
+
     fn train(&mut self, num_episode: u64) {
         // Number of episode the agent has won.
         let mut wins = 0;
@@ -197,26 +187,60 @@ impl MonteCarloAgent {
         let mut looses = 0;
 
         for episode in 0..num_episode {
-            // We record the trajectory of the episode.
-            let mut trajectory = Trajectory::new();
-
+            // We clear eligibility traces.
+            self.eligibility_traces = HashMap::new();
             loop {
-                // We observe the environment.
                 let (_, observation, _) = self.env.observe();
-
                 let action = self.epsilon_greedy_policy(&observation);
-
-                // We act on the environment.
                 self.env.act(action);
+                let (reward, next_observation, first) = self.env.observe();
 
-                // Record the trajectory.
-                let (reward, _, first) = self.env.observe();
+                // The next action we will take if we follow our policy.
+                let next_action = self.epsilon_greedy_policy(&next_observation);
 
-                // dbg!((&observation, &action, &reward, first));
+                self.visited_state_action
+                    .entry((observation, action))
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
 
-                debug_assert!(!trajectory.rewards.contains(&1.0));
-                debug_assert!(!trajectory.rewards.contains(&-1.0));
-                trajectory.push((observation, action, reward));
+                self.visited_states
+                    .entry(observation)
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
+
+                // TD-error δ. Estimated value minus the one we really got.
+                let delta =
+                    self.compute_delta(reward, next_observation, next_action, observation, action);
+
+                // E(S, A) <- E(S, A) + 1
+                self.eligibility_traces
+                    .entry((observation, action))
+                    .and_modify(|count| *count += 1.)
+                    .or_insert(1.);
+
+                // Step size α
+                let alpha = self.compute_step_size(&observation, &action);
+
+                for (state, action) in self.visited_state_action.keys() {
+                    // For each state action pair we update the value with αδE(s, a)
+                    self.action_value
+                        .entry((*state, *action))
+                        .and_modify(|value| {
+                            *value += alpha
+                                * delta
+                                * *self
+                                    .eligibility_traces
+                                    .entry((*state, *action))
+                                    .or_insert(0.0)
+                        })
+                        .or_insert(0.);
+
+                    let eligibility_trace = self.eligibility_traces[&(*state, *action)];
+
+                    // At each step, we decrease the value of all states. More recent state will have more importance.
+                    // IndexMut is not implemented for HashMap, hence the get_mut unwrap.
+                    *self.eligibility_traces.get_mut(&(*state, *action)).unwrap() *= self.lambda;
+                }
 
                 if first {
                     if reward == 1. {
@@ -232,8 +256,9 @@ impl MonteCarloAgent {
                 }
             }
 
-            if episode % EPISODE_PRINT == 0 {
+            if episode % EPISODE_PRINT == 0 && episode != 0 {
                 println!("------------------------");
+                println!("lambda = {:.1}", self.lambda);
                 println!("Episode {}", episode,);
                 println!("wins {:.2}%", (wins as f64) / (episode as f64 + 1.) * 100.);
                 println!(
@@ -245,42 +270,8 @@ impl MonteCarloAgent {
                     (equalities as f64) / (episode as f64 + 1.) * 100.
                 );
             }
-            // At each end of episode we update our action-value function.
-            self.update_action_value(trajectory);
         }
     }
-}
-
-// Some helper function
-
-// TODO: try to have the same result than matplotlib.
-fn _plot_action_value_fn(action_value: &HashMap<(Observation, Action), f64>) {
-    let root = BitMapBackend::new("images/3d-surface.png", (640, 480)).into_drawing_area();
-
-    root.fill(&WHITE).unwrap();
-
-    let mut chart = ChartBuilder::on(&root)
-        .margin(20)
-        .caption("3D Surface", ("sans-serif", 40))
-        .build_cartesian_3d(1.0..10.0, -1.0..1.0, 21.0..1.0)
-        .unwrap();
-
-    chart.configure_axes().draw().unwrap();
-
-    // More or less the equivalent of matplotlib `plot_surface`
-    // chart.draw_series(SurfaceSeries::xoz(a, b, f));
-    chart
-        .draw_series(LineSeries::new(
-            action_value.iter().map(|((observation, _), reward)| {
-                (
-                    observation.bank_sum as f64,
-                    *reward,
-                    observation.player_sum as f64,
-                )
-            }),
-            RED,
-        ))
-        .unwrap();
 }
 
 // Save the state value function
@@ -295,12 +286,17 @@ fn save(state_value: Array2<f64>) {
 
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 5_000_000;
+    const NUM_EPISODE: u64 = 100_000;
+
+    // for lambda in 0..=10 {
+    //     let lambda = f64::from(lambda) * 0.1;
+    let lambda = 0.5;
     let env = Easy21::default();
-    let mut mc_agent = MonteCarloAgent::new(env);
-    mc_agent.train(NUM_EPISODE);
-    let state_value = mc_agent.compute_state_value_function();
+    let mut td_agent = TdAgent::new(env, lambda);
+    td_agent.train(NUM_EPISODE);
+    let state_value = td_agent.compute_state_value_function();
 
     // println!("{}", state_value);
     save(state_value);
+    // }
 }
