@@ -188,7 +188,7 @@ impl TdAgent {
 
         for episode in 0..num_episode {
             // We clear eligibility traces.
-            self.eligibility_traces = HashMap::new();
+            self.eligibility_traces.clear();
             loop {
                 let (_, observation, _) = self.env.observe();
                 let action = self.epsilon_greedy_policy(&observation);
@@ -284,19 +284,41 @@ fn save(state_value: Array2<f64>) {
     write!(output, "{}", serde_json::to_string(&state_value).unwrap()).unwrap();
 }
 
+fn mean_square_error(
+    q_star: &HashMap<(Observation, Action), f64>,
+    q: &HashMap<(Observation, Action), f64>,
+) -> f64 {
+    let mut mean_square_error = 0.;
+    for ((state, action), q_value) in q_star.iter() {
+        mean_square_error += (q_value - q.get(&(*state, *action)).unwrap_or(&0.)).powf(2.);
+    }
+    mean_square_error
+}
+
 fn main() {
     /// Number of episodes we will do to polish our estimation.
-    const NUM_EPISODE: u64 = 100_000;
+    const NUM_EPISODE: u64 = 300_000;
 
-    // for lambda in 0..=10 {
-    //     let lambda = f64::from(lambda) * 0.1;
-    let lambda = 0.5;
+    let lambda = 0.8;
     let env = Easy21::default();
     let mut td_agent = TdAgent::new(env, lambda);
     td_agent.train(NUM_EPISODE);
-    let state_value = td_agent.compute_state_value_function();
 
-    // println!("{}", state_value);
-    save(state_value);
-    // }
+    let q_star = td_agent.action_value;
+
+    let mut mean_square_errors = Vec::new();
+    // for charts
+    let mut lambdas = Vec::new();
+
+    for lambda in 0..=10 {
+        let lambda = f64::from(lambda) * 0.1;
+        lambdas.push(lambda);
+        let env = Easy21::default();
+        let mut td_agent = TdAgent::new(env, lambda);
+        td_agent.train(1000);
+        mean_square_errors.push(mean_square_error(&q_star, &td_agent.action_value));
+    }
+
+    println!("{lambdas:?}");
+    println!("{mean_square_errors:?}");
 }

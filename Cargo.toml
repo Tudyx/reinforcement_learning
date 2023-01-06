@@ -14,8 +14,8 @@ name = "mc"
 path = "src/monte_carlo.rs"
 
 [[bin]]
-name = "td"
-path = "src/td.rs"
+name = "sarsa"
+path = "src/sarsa.rs"
 
 
 [profile.release]
