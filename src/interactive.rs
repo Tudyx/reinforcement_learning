@@ -3,7 +3,7 @@ use std::io;
 use anyhow::bail;
 
 use rust_gym::easy_21::{Action, Easy21};
-use rust_gym::Environment;
+use rust_gym::Gym3Environment;
 
 struct Interactive {
     env: Easy21,
@@ -28,7 +28,7 @@ impl Interactive {
         }
     }
 
-    fn retrieve_key_pressed(&self) -> anyhow::Result<<Easy21 as Environment>::Action> {
+    fn retrieve_key_pressed(&self) -> anyhow::Result<<Easy21 as Gym3Environment>::Action> {
         let mut action = String::new();
         io::stdin().read_line(&mut action)?;
         let action = action.trim().parse::<usize>()?;
@@ -50,7 +50,7 @@ impl Interactive {
 
         Ok(())
     }
-    fn act(&mut self, action: <Easy21 as Environment>::Action) -> bool {
+    fn act(&mut self, action: <Easy21 as Gym3Environment>::Action) -> bool {
         self.env.act(action);
 
         self.episode_steps += 1;

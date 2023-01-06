@@ -1,21 +1,27 @@
 use crate::environment;
-use crate::Environment;
+use crate::Gym3Environment;
 
 /// Est-ce qu'un extension trait serait plus adapaté?
 /// -> Pour l'instant impl env sur un env est mieux que le trait wrapper.
 
 /// Fourni une impélémentation par default des méthodes.
 pub trait Wrapper {
-    type Environment: Environment;
+    type Environment: Gym3Environment;
 
     fn environment_mut(&mut self) -> &mut Self::Environment;
     fn environment(&self) -> &Self::Environment;
 
-    fn act(&mut self, action: <Self::Environment as Environment>::Action) {
+    fn act(&mut self, action: <Self::Environment as Gym3Environment>::Action) {
         self.environment_mut().act(action);
     }
 
-    fn observe(&self) -> (f64, <Self::Environment as Environment>::Observation, bool) {
+    fn observe(
+        &self,
+    ) -> (
+        f64,
+        <Self::Environment as Gym3Environment>::Observation,
+        bool,
+    ) {
         self.environment().observe()
     }
 
@@ -23,7 +29,7 @@ pub trait Wrapper {
     // Associated constant can't use const generics yet, that what we can't change render_modes to an array an
     // use associated constant.
     fn metadata() -> environment::Metadata {
-        <Self::Environment as Environment>::metadata()
+        <Self::Environment as Gym3Environment>::metadata()
     }
 }
 
@@ -41,7 +47,7 @@ impl TimingEnv {
     }
 }
 
-impl Environment for TimingEnv {
+impl Gym3Environment for TimingEnv {
     type Action = ();
 
     type Observation = ();
@@ -66,7 +72,7 @@ impl Environment for TimingEnv {
 
 struct RecordActs<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     acts: Vec<E::Action>,
@@ -74,16 +80,16 @@ where
 
 struct RecordActs2<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     acts: Vec<E::Action>,
     env: E,
 }
 
-impl<E> Environment for RecordActs2<E>
+impl<E> Gym3Environment for RecordActs2<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     type Action = E::Action;
@@ -105,7 +111,7 @@ where
 
 impl<E> RecordActs2<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     pub fn new(env: E) -> Self {
@@ -115,7 +121,7 @@ where
 
 impl<E> Wrapper for RecordActs<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     type Environment = E;
@@ -136,7 +142,7 @@ where
 
 impl<E> RecordActs<E>
 where
-    E: Environment,
+    E: Gym3Environment,
     E::Action: Clone,
 {
     pub fn new() -> Self {

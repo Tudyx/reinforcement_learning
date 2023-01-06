@@ -1,20 +1,19 @@
-use crate::environment::Environment;
-
+use crate::environment::Gym3Environment;
 
 // TODO: introduce egui to this
 
 struct ViewerWraper<E>
 where
-    E: Environment,
+    E: Gym3Environment,
 {
     env: E,
     width: u64,
     height: u64,
 }
 
-impl<E> Environment for ViewerWraper<E>
+impl<E> Gym3Environment for ViewerWraper<E>
 where
-    E: Environment,
+    E: Gym3Environment,
 {
     type Action = E::Action;
 
@@ -34,7 +33,9 @@ where
     }
 }
 
-
-impl<E> ViewerWraper<E> where E: Environment {
-    fn get_image(&self){}
+impl<E> ViewerWraper<E>
+where
+    E: Gym3Environment,
+{
+    fn get_image(&self) {}
 }

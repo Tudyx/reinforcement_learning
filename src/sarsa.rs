@@ -10,7 +10,7 @@ use itertools::izip;
 use ndarray::{Array, Array2};
 use rand::prelude::*;
 use rust_gym::easy_21::{Action, Easy21, Observation};
-use rust_gym::Environment;
+use rust_gym::Gym3Environment;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;

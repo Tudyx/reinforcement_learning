@@ -5,7 +5,7 @@
 //!
 //! The player objective is to have a total of card superior to the bank.
 
-use crate::Environment;
+use crate::Gym3Environment;
 use rand::prelude::*;
 use std::{cmp::Ordering, ops::RangeInclusive};
 
@@ -13,6 +13,7 @@ use std::{cmp::Ordering, ops::RangeInclusive};
 // <https://github.com/christopher-hesse/computer-tennis/blob/9f8aeacf5240d616179fdadc4fc50c9fb15987b7/computer_tennis/env.py#L150>
 
 /// Simplified version of BlackJack.
+#[derive(Debug, Clone)]
 pub struct Easy21 {
     player_sum: i8,
     bank_sum: i8,
@@ -39,7 +40,7 @@ pub struct Observation {
     pub bank_sum: i8,
 }
 
-impl Environment for Easy21 {
+impl Gym3Environment for Easy21 {
     type Action = Action;
     type Observation = Observation;
 

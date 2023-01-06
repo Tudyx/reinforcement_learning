@@ -9,8 +9,9 @@
 // - Est ce que je fois parallelizer l'environment pour voir si cela raoute des contarintes?
 mod algorithm;
 pub mod easy_21;
+mod easy_21_vec;
 mod environment;
-pub use environment::Environment;
+pub use environment::Gym3Environment;
 // mod concat;
 // mod grid_word;
 mod viewer;
