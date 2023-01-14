@@ -1,6 +1,6 @@
 # Baseline agent
 
-Provide some basic reinforcement learning agent.
+Provide some basic reinforcement learning agents.
 
 Currently there is:
 

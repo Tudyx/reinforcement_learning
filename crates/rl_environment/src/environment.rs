@@ -47,10 +47,6 @@ pub struct Metadata2<const N: usize> {
     pub render_fps: usize,
 }
 
-pub trait Space<T> {}
-
-/// Je pense que l'action space est utile pour l'agent.
-
 pub struct Step<O> {
     last_reward: f64,
     observation: O,
@@ -67,7 +63,7 @@ impl<O> Step<O> {
     }
 
     /// The reward corresponding to the last agent's action. If no agent has acted on
-    /// the environment, then this value don't change.
+    /// the environment since, then this value is the same.
     pub fn last_reward(&self) -> f64 {
         self.last_reward
     }
@@ -84,24 +80,31 @@ impl<O> Step<O> {
     }
 }
 
-pub type Reward = f64;
-
-// inspired de gym3 API.
-// la gym3 api ne gere pas les terminated observation.
-// y'a un décalage contre-intuitif dans l'observation.
+/// Inspired from [Gym3 API]
+///
+/// Pros:
+/// - `VecEnv` really easy to set up
+/// - user has no worry about resetting
+/// - no undefined behavior after reset
+///
+/// Cons:
+/// - no final observation
+/// - counterintuitive gap between observation and reward in the observe method
+///
+/// [Gym3 API]: https://github.com/openai/gym3
 pub trait Gym3Environment {
     /// Define the type of the action that an agent can take in the environment.
-    /// The domaine of validity of this type must be as close as possible as the action space.
+    /// The domain of validity of this type must be as close as possible as the action space.
     type Action;
     /// Define the type of the observation that an agent can observe in the environment. The observation can represent the full
-    /// state of the environment or only on part for environment paratially observable.
-    /// The domaine of validity of this type must be as close as possible as the state space.
+    /// state of the environment or only on part for environment partially observable.
+    /// The domain of validity of this type must be as close as possible as the state space.
     type Observation;
 
-    // TODO: the last tuple element is a dict
+    /// Act on the environment. To see the result of the action you must call `observe` function.
     fn act(&mut self, action: Self::Action);
 
-    /// (Reward, observation first)
-    /// The reward correspond to the previous action (not taken from the current observation)
+    /// Observe the current state of the environment. An agent can observe multiple time between 2 actions.
+    /// Indeed in case of multi-agent environment, the environment might change between 2 actions.
     fn observe(&self) -> Step<Self::Observation>;
 }

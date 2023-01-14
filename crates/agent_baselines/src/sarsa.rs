@@ -10,7 +10,7 @@ use environment_baselines::easy_21::{Action, Easy21, Observation};
 use itertools::izip;
 use ndarray::{Array, Array2};
 use rand::prelude::*;
-use rl_environment::{Gym3Environment, Step};
+use rl_environment::Gym3Environment;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
