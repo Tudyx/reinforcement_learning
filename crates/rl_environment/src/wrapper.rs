@@ -1,4 +1,4 @@
-use crate::Gym3Environment;
+use crate::{Gym3Environment, Step};
 
 /// Est-ce qu'un extension trait serait plus adapaté?
 /// -> Pour l'instant impl env sur un env est mieux que le trait wrapper.
@@ -14,13 +14,7 @@ pub trait Wrapper {
         self.environment_mut().act(action);
     }
 
-    fn observe(
-        &self,
-    ) -> (
-        f64,
-        <Self::Environment as Gym3Environment>::Observation,
-        bool,
-    ) {
+    fn observe(&self) -> Step<<Self::Environment as Gym3Environment>::Observation> {
         self.environment().observe()
     }
 }
@@ -51,10 +45,9 @@ impl Gym3Environment for TimingEnv {
         }
     }
 
-    fn observe(&self) -> (f64, Self::Observation, bool) {
+    fn observe(&self) -> Step<Self::Observation> {
         let first = self.steps == 0;
-
-        (0.0, (), first)
+        Step::new(0.0, (), first)
     }
 }
 
@@ -88,7 +81,7 @@ where
         self.env.act(action)
     }
 
-    fn observe(&self) -> (f64, Self::Observation, bool) {
+    fn observe(&self) -> Step<Self::Observation> {
         self.env.observe()
     }
 }
@@ -134,99 +127,104 @@ where
     }
 }
 
-use std::time::{Duration, Instant};
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn fast() {
-    const NUM_STEPS: u64 = 10000;
-    const EPISODE_LEN: u64 = 100;
+    use std::time::{Duration, Instant};
 
-    let now = Instant::now();
+    #[test]
+    fn fast() {
+        const NUM_STEPS: u64 = 10000;
+        const EPISODE_LEN: u64 = 100;
 
-    let mut env = TimingEnv::new(EPISODE_LEN);
+        let now = Instant::now();
 
-    let mut episode_count = 0;
-    let expected_episode_count = NUM_STEPS / EPISODE_LEN;
+        let mut env = TimingEnv::new(EPISODE_LEN);
 
-    for step in 0..NUM_STEPS {
-        env.act(());
-        let (_, _, first) = env.observe();
-        if first {
-            episode_count += 1;
+        let mut episode_count = 0;
+        let expected_episode_count = NUM_STEPS / EPISODE_LEN;
+
+        for step in 0..NUM_STEPS {
+            env.act(());
+            let current_step = env.observe();
+            if current_step.is_first() {
+                episode_count += 1;
+            }
+            if step == NUM_STEPS - 1 {
+                assert_eq!(episode_count, expected_episode_count);
+            }
         }
-        if step == NUM_STEPS - 1 {
-            assert_eq!(episode_count, expected_episode_count);
-        }
+
+        let elapsed = now.elapsed().as_millis();
+
+        println!("{elapsed}");
+        // We assert we spend less than one miliseconds by step
+        assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
     }
 
-    let elapsed = now.elapsed().as_millis();
+    #[test]
+    fn wrapper() {
+        const NUM_STEPS: u64 = 1000;
+        const EPISODE_LEN: u64 = 10;
 
-    println!("{elapsed}");
-    // We assert we spend less than one miliseconds by step
-    assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
-}
+        let now = Instant::now();
 
-#[test]
-fn wrapper() {
-    const NUM_STEPS: u64 = 1000;
-    const EPISODE_LEN: u64 = 10;
+        let mut env = TimingEnv::new(EPISODE_LEN);
 
-    let now = Instant::now();
+        let mut env: RecordActs<TimingEnv> = RecordActs::new();
 
-    let mut env = TimingEnv::new(EPISODE_LEN);
+        let mut episode_count = 0;
+        let expected_episode_count = NUM_STEPS / EPISODE_LEN;
 
-    let mut env: RecordActs<TimingEnv> = RecordActs::new();
-
-    let mut episode_count = 0;
-    let expected_episode_count = NUM_STEPS / EPISODE_LEN;
-
-    for step in 0..NUM_STEPS {
-        env.act(());
-        let (_, _, first) = env.observe();
-        if first {
-            episode_count += 1;
+        for step in 0..NUM_STEPS {
+            env.act(());
+            let current_step = env.observe();
+            if current_step.is_first() {
+                episode_count += 1;
+            }
+            if step == NUM_STEPS - 1 {
+                assert_eq!(episode_count, expected_episode_count);
+            }
         }
-        if step == NUM_STEPS - 1 {
-            assert_eq!(episode_count, expected_episode_count);
-        }
+
+        let elapsed = now.elapsed().as_millis();
+
+        println!("{elapsed}");
+        // We assert we spend less than one miliseconds by step
+        assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
     }
 
-    let elapsed = now.elapsed().as_millis();
+    #[test]
+    fn wrapper2() {
+        const NUM_STEPS: u64 = 1000;
+        const EPISODE_LEN: u64 = 10;
 
-    println!("{elapsed}");
-    // We assert we spend less than one miliseconds by step
-    assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
-}
+        let now = Instant::now();
 
-#[test]
-fn wrapper2() {
-    const NUM_STEPS: u64 = 1000;
-    const EPISODE_LEN: u64 = 10;
+        let env = TimingEnv::new(EPISODE_LEN);
 
-    let now = Instant::now();
+        let mut env = RecordActs2::new(env);
 
-    let env = TimingEnv::new(EPISODE_LEN);
+        let mut episode_count = 0;
+        let expected_episode_count = NUM_STEPS / EPISODE_LEN;
 
-    let mut env = RecordActs2::new(env);
-
-    let mut episode_count = 0;
-    let expected_episode_count = NUM_STEPS / EPISODE_LEN;
-
-    for step in 0..NUM_STEPS {
-        env.act(());
-        let (_, _, first) = env.observe();
-        if first {
-            episode_count += 1;
+        for step in 0..NUM_STEPS {
+            env.act(());
+            let current_step = env.observe();
+            if current_step.is_first() {
+                episode_count += 1;
+            }
+            if step == NUM_STEPS - 1 {
+                assert_eq!(episode_count, expected_episode_count);
+            }
         }
-        if step == NUM_STEPS - 1 {
-            assert_eq!(episode_count, expected_episode_count);
-        }
+
+        let elapsed = now.elapsed().as_millis();
+
+        println!("{elapsed}");
+        assert_eq!(env.acts.len(), NUM_STEPS as usize);
+        // We assert we spend less than one miliseconds by step
+        assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
     }
-
-    let elapsed = now.elapsed().as_millis();
-
-    println!("{elapsed}");
-    assert_eq!(env.acts.len(), NUM_STEPS as usize);
-    // We assert we spend less than one miliseconds by step
-    assert!((elapsed as f64 / NUM_STEPS as f64) < 1.0);
 }

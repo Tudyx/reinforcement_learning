@@ -51,10 +51,37 @@ pub trait Space<T> {}
 
 /// Je pense que l'action space est utile pour l'agent.
 
-struct Observe<O> {
+pub struct Step<O> {
     last_reward: f64,
     observation: O,
     first: bool,
+}
+
+impl<O> Step<O> {
+    pub fn new(last_reward: f64, observation: O, first: bool) -> Self {
+        Self {
+            last_reward,
+            observation,
+            first,
+        }
+    }
+
+    /// The reward corresponding to the last agent's action. If no agent has acted on
+    /// the environment, then this value don't change.
+    pub fn last_reward(&self) -> f64 {
+        self.last_reward
+    }
+
+    /// Is this step the first one?
+    /// For episodic environment this means the beginning of a new episode.
+    pub fn is_first(&self) -> bool {
+        self.first
+    }
+
+    /// Return an observation from the current state of the environment.
+    pub fn observation(&self) -> &O {
+        &self.observation
+    }
 }
 
 pub type Reward = f64;
@@ -63,8 +90,12 @@ pub type Reward = f64;
 // la gym3 api ne gere pas les terminated observation.
 // y'a un décalage contre-intuitif dans l'observation.
 pub trait Gym3Environment {
-    // const METADATA: Metadata2<2>;
+    /// Define the type of the action that an agent can take in the environment.
+    /// The domaine of validity of this type must be as close as possible as the action space.
     type Action;
+    /// Define the type of the observation that an agent can observe in the environment. The observation can represent the full
+    /// state of the environment or only on part for environment paratially observable.
+    /// The domaine of validity of this type must be as close as possible as the state space.
     type Observation;
 
     // TODO: the last tuple element is a dict
@@ -72,5 +103,5 @@ pub trait Gym3Environment {
 
     /// (Reward, observation first)
     /// The reward correspond to the previous action (not taken from the current observation)
-    fn observe(&self) -> (Reward, Self::Observation, bool);
+    fn observe(&self) -> Step<Self::Observation>;
 }

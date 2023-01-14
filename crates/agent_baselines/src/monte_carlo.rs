@@ -203,7 +203,7 @@ impl MonteCarloAgent {
 
             loop {
                 // We observe the environment.
-                let (_, observation, _) = self.env.observe();
+                let observation = *self.env.observe().observation();
 
                 let action = self.epsilon_greedy_policy(&observation);
 
@@ -211,23 +211,23 @@ impl MonteCarloAgent {
                 self.env.act(action);
 
                 // Record the trajectory.
-                let (reward, _, first) = self.env.observe();
+                let step = self.env.observe();
 
                 // dbg!((&observation, &action, &reward, first));
 
                 debug_assert!(!trajectory.rewards.contains(&1.0));
                 debug_assert!(!trajectory.rewards.contains(&-1.0));
-                trajectory.push((observation, action, reward));
+                trajectory.push((observation, action, step.last_reward()));
 
-                if first {
-                    if reward == 1. {
+                if step.is_first() {
+                    if step.last_reward() == 1. {
                         wins += 1;
-                    } else if reward == -1. {
+                    } else if step.last_reward() == -1. {
                         looses += 1;
                     } else {
                         equalities += 1;
 
-                        debug_assert_eq!(reward, 0.0)
+                        debug_assert_eq!(step.last_reward(), 0.0)
                     }
                     break;
                 }

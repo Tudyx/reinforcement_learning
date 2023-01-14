@@ -6,7 +6,7 @@
 //! The player objective is to have a total of card superior to the bank.
 
 use rand::prelude::*;
-use rl_environment::Gym3Environment;
+use rl_environment::{Gym3Environment, Step};
 use std::{cmp::Ordering, ops::RangeInclusive};
 
 // TODO: explore the "last_observe" pattern
@@ -83,7 +83,7 @@ impl Gym3Environment for Easy21 {
         }
     }
 
-    fn observe(&self) -> (f64, Self::Observation, bool) {
+    fn observe(&self) -> Step<Self::Observation> {
         let observation = Observation {
             player_sum: self.player_sum,
             bank_sum: self.bank_sum,
@@ -93,8 +93,7 @@ impl Gym3Environment for Easy21 {
             // println!("Player score {}", self.player_sum);
             // println!("Bank score {}", self.bank_sum);
         }
-
-        (self.last_reward, observation, self.first)
+        Step::new(self.last_reward, observation, self.first)
     }
 }
 

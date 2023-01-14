@@ -21,7 +21,7 @@ impl Interactive {
     }
 
     fn run(&mut self) -> anyhow::Result<()> {
-        let (_, observation, _) = self.env.observe();
+        let observation = *self.env.observe().observation();
         dbg!(observation);
         loop {
             self.update()?;
@@ -55,13 +55,13 @@ impl Interactive {
 
         self.episode_steps += 1;
         self.total_steps += 1;
-        let (reward, observation, first) = self.env.observe();
-        println!("Reward: {reward}");
-        if first {
+        let step = self.env.observe();
+        println!("Reward: {}", step.last_reward());
+        if step.is_first() {
             println!("Finish the episode in {} steps", self.episode_steps);
         }
-        dbg!(observation);
-        first
+        dbg!(step.observation());
+        step.is_first()
     }
 }
 

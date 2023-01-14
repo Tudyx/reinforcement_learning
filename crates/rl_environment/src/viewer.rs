@@ -1,4 +1,4 @@
-use crate::environment::Gym3Environment;
+use crate::{environment::Gym3Environment, Step};
 
 // TODO: introduce egui to this
 
@@ -24,7 +24,7 @@ where
         let image = self.get_image();
     }
 
-    fn observe(&self) -> (f64, Self::Observation, bool) {
+    fn observe(&self) -> Step<Self::Observation> {
         self.env.observe()
     }
 }

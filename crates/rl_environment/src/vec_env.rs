@@ -1,4 +1,4 @@
-use crate::{environment::Reward, Gym3Environment};
+use crate::{Gym3Environment, Step};
 
 pub trait VecEnvironment {
     type Action;
@@ -8,7 +8,7 @@ pub trait VecEnvironment {
 
     /// (Reward, observation first)
     /// The reward correspond to the previous action (not taken from the current observation)
-    fn observe(&self) -> Vec<(Reward, Self::Observation, bool)>;
+    fn observe(&self) -> Vec<Step<Self::Observation>>;
 }
 
 pub struct VecEnv<E>
@@ -36,7 +36,7 @@ where
             env.act(action);
         }
     }
-    fn observe(&self) -> Vec<(Reward, Self::Observation, bool)> {
+    fn observe(&self) -> Vec<Step<Self::Observation>> {
         self.envs.iter().map(|env| env.observe()).collect()
     }
 }

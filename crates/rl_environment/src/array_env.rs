@@ -1,4 +1,4 @@
-use crate::{environment::Reward, Gym3Environment};
+use crate::{Gym3Environment, Step};
 
 pub trait ArrayEnvironment<const N: usize> {
     type Action;
@@ -6,8 +6,7 @@ pub trait ArrayEnvironment<const N: usize> {
 
     fn act(&mut self, actions: [Self::Action; N]);
 
-    /// The reward correspond to the previous action (not taken from the current observation)
-    fn observe(&self) -> [(Reward, Self::Observation, bool); N];
+    fn observe(&self) -> [Step<Self::Observation>; N];
 }
 
 /// Produce observation on array, no heap allocation here.
@@ -32,7 +31,7 @@ where
         }
     }
 
-    fn observe(&self) -> [(Reward, Self::Observation, bool); N] {
+    fn observe(&self) -> [Step<Self::Observation>; N] {
         // TODO: Check the warning in Array::map about large array concern this function.
         let mut env = self.envs.iter();
         [(); N].map(|_| env.next().expect("we know the size of the env").observe())

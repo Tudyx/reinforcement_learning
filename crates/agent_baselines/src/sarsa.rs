@@ -10,7 +10,7 @@ use environment_baselines::easy_21::{Action, Easy21, Observation};
 use itertools::izip;
 use ndarray::{Array, Array2};
 use rand::prelude::*;
-use rl_environment::Gym3Environment;
+use rl_environment::{Gym3Environment, Step};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -190,13 +190,13 @@ impl TdAgent {
             // We clear eligibility traces.
             self.eligibility_traces.clear();
             loop {
-                let (_, observation, _) = self.env.observe();
+                let observation = *self.env.observe().observation();
                 let action = self.epsilon_greedy_policy(&observation);
                 self.env.act(action);
-                let (reward, next_observation, first) = self.env.observe();
+                let step = self.env.observe();
 
                 // The next action we will take if we follow our policy.
-                let next_action = self.epsilon_greedy_policy(&next_observation);
+                let next_action = self.epsilon_greedy_policy(step.observation());
 
                 self.visited_state_action
                     .entry((observation, action))
@@ -209,8 +209,13 @@ impl TdAgent {
                     .or_insert(1);
 
                 // TD-error δ. Estimated value minus the one we really got.
-                let delta =
-                    self.compute_delta(reward, next_observation, next_action, observation, action);
+                let delta = self.compute_delta(
+                    step.last_reward(),
+                    *step.observation(),
+                    next_action,
+                    observation,
+                    action,
+                );
 
                 // E(S, A) <- E(S, A) + 1
                 self.eligibility_traces
@@ -242,15 +247,15 @@ impl TdAgent {
                     *self.eligibility_traces.get_mut(&(*state, *action)).unwrap() *= self.lambda;
                 }
 
-                if first {
-                    if reward == 1. {
+                if step.is_first() {
+                    if step.last_reward() == 1. {
                         wins += 1;
-                    } else if reward == -1. {
+                    } else if step.last_reward() == -1. {
                         looses += 1;
                     } else {
                         equalities += 1;
 
-                        debug_assert_eq!(reward, 0.0)
+                        debug_assert_eq!(step.last_reward(), 0.0)
                     }
                     break;
                 }
