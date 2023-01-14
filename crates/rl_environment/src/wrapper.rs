@@ -1,4 +1,3 @@
-use crate::environment;
 use crate::Gym3Environment;
 
 /// Est-ce qu'un extension trait serait plus adapaté?

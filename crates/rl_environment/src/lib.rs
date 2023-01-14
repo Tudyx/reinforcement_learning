@@ -14,3 +14,8 @@ pub use environment::Gym3Environment;
 // mod grid_word;
 mod viewer;
 mod wrapper;
+
+mod array_env;
+pub use array_env::ArrayEnv;
+mod vec_env;
+pub use vec_env::VecEnv;
