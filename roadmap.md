@@ -29,3 +29,5 @@ Pour le cas de gym vec, ca créer plein d'env dans des sous processus puis ca ut
 
 Est-ce que les env proc gen renvoit un vec par def?
 
+Est-ce que environlent baselines devrait être sous feature flag de environment?
+
