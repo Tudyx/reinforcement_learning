@@ -1,3 +1,3 @@
-# Reinforcement learning
+# Reinforcement Learning
 
-A collection of Reinforcement learning agent and environment.
+A collection of reinforcement learning agents and environments.
