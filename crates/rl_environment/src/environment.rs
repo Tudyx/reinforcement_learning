@@ -6,7 +6,7 @@ pub enum RenderMode {
     Ansi,
 }
 
-pub enum Osbservable {
+pub enum Observable {
     /// Chess
     Fully,
     /// Poker
@@ -46,6 +46,7 @@ pub struct Metadata2<const N: usize> {
     pub render_modes: [RenderMode; N],
     pub render_fps: usize,
 }
+// A training step. This is generic over the observation.
 
 pub struct Step<O> {
     last_reward: f64,

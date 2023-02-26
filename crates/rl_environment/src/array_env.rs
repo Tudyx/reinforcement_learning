@@ -51,3 +51,15 @@ where
         }
     }
 }
+
+impl<E, const N: usize> FromIterator<E> for ArrayEnv<E, N>
+where
+    E: Gym3Environment,
+{
+    fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
+        let mut iter = iter.into_iter();
+        Self {
+            envs: [(); N].map(|_| iter.next().expect("we know the size of the env")),
+        }
+    }
+}

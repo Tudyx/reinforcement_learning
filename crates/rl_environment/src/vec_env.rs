@@ -46,11 +46,22 @@ impl<E> VecEnv<E>
 where
     E: Gym3Environment + Clone,
 {
-    //FIXME: if we want to initialize with different seed each env?
+    // FIXME: if we want to initialize with different seed each env?
     // Create a new vec env.
     pub fn new(env: E, nb_env: usize) -> Self {
         Self {
             envs: vec![env; nb_env],
+        }
+    }
+}
+
+impl<E> FromIterator<E> for VecEnv<E>
+where
+    E: Gym3Environment,
+{
+    fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
+        Self {
+            envs: iter.into_iter().collect(),
         }
     }
 }
