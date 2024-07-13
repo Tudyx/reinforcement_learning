@@ -1,3 +1,5 @@
+use std::any::Any;
+
 // TODO: replace by bitflag
 #[derive(Debug)]
 pub enum RenderMode {
@@ -111,6 +113,8 @@ pub trait Gym3Environment {
     fn observe(&self) -> Step<Self::Observation>;
 }
 
+// TODO add impl for Box and Arc ?
+
 // Experiment over https://github.com/openai/gym/issues/2510
 #[derive(Clone, Copy)]
 enum Done {
@@ -193,5 +197,61 @@ fn done_api() {
         println!("next_state = None");
     } else {
         println!("next_state = torch.tensor(observation, ...");
+    }
+}
+
+// Optional type erasure pattern for the gymp 3 environement.
+// It allow for instance to makes bindings with the Python world
+//
+// My alternative that having a struct DynEnv<SaticEnv> seems to be more simpler
+
+pub trait AnyGym3Environment {
+    fn as_any(&self) -> &dyn Any;
+    fn dyn_act(&mut self, action: Box<dyn Any>);
+    fn dyn_observe(&self) -> Step<Box<dyn Any>>;
+}
+
+// Blanket impl
+impl<E> AnyGym3Environment for E
+where
+    E: Gym3Environment + 'static,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn dyn_act(&mut self, action: Box<dyn Any>) {
+        // As this is the user that provid the action this can failed...
+        if let Ok(action) = action.downcast::<E::Action>() {
+            self.act(*action)
+        }
+    }
+
+    fn dyn_observe(&self) -> Step<Box<dyn Any>> {
+        let Step {
+            last_reward,
+            observation,
+            first,
+        } = self.observe();
+
+        Step {
+            last_reward,
+            observation: Box::new(observation),
+            first,
+        }
+    }
+}
+
+impl Gym3Environment for dyn AnyGym3Environment {
+    type Action = Box<dyn Any>;
+
+    type Observation = Box<dyn Any>;
+
+    fn act(&mut self, action: Self::Action) {
+        self.dyn_act(action)
+    }
+
+    fn observe(&self) -> Step<Self::Observation> {
+        self.dyn_observe()
     }
 }

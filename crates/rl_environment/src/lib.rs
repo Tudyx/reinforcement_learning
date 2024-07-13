@@ -9,7 +9,7 @@
 // - Est ce que je fois parallelizer l'environment pour voir si cela raoute des contarintes?
 mod algorithm;
 mod environment;
-pub use environment::{Gym3Environment, Step};
+pub use environment::{AnyGym3Environment, Gym3Environment, Step};
 // mod concat;
 // mod grid_word;
 mod viewer;

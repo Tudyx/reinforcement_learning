@@ -139,6 +139,8 @@ impl Easy21 {
 
 #[cfg(test)]
 mod tests {
+    use rl_environment::AnyGym3Environment;
+
     use super::*;
 
     #[test]
@@ -182,5 +184,69 @@ mod tests {
 
         assert!((0.30..=0.36).contains(&red_card_ratio));
         assert!((0.60..=0.70).contains(&black_card_ratio));
+    }
+
+    struct DumbEnv {}
+    impl Gym3Environment for DumbEnv {
+        type Action = ();
+
+        type Observation = ();
+
+        fn act(&mut self, _action: Self::Action) {
+            println!("cri cri")
+        }
+
+        fn observe(&self) -> Step<Self::Observation> {
+            Step::new(-1.0, (), false)
+        }
+    }
+
+    #[test]
+    fn optional_type_erasure() {
+        let env = Easy21::default();
+
+        // This works but we have to precise the type so it's not really erased. We can't make a collection of environement
+        // out of it
+        let _dyn_env: Box<dyn Gym3Environment<Action = Action, Observation = Observation>> =
+            Box::new(env);
+        let _dyn_dumb_env: Box<dyn Gym3Environment<Action = (), Observation = ()>> =
+            Box::new(DumbEnv {});
+        // This does not compile
+        // let envs = vec![_dyn_dumb_env, _dyn_env];
+
+        let env = Easy21::default();
+        // The real type erasure
+        let mut dyn_env: Box<dyn AnyGym3Environment> = Box::new(env);
+
+        // This works
+        for _ in 0..1000 {
+            if rand::random() {
+                dyn_env.act(Box::new(Action::Hit));
+            } else {
+                dyn_env.act(Box::new(Action::Stick));
+            }
+        }
+        // With wrong type this work (we could add runtime error). In xilem "that the framework that handle this so it wont't fail"
+        for _ in 0..1000 {
+            if rand::random() {
+                dyn_env.act(Box::new(2));
+            } else {
+                dyn_env.act(Box::new(String::from("holala")));
+            }
+        }
+
+        // We can use also use the the methods form the wrapper directly
+        for _ in 0..1000 {
+            if rand::random() {
+                dyn_env.dyn_act(Box::new(2));
+            } else {
+                dyn_env.dyn_act(Box::new(String::from("holala")));
+            }
+        }
+        let dyn_dumb_env: Box<dyn AnyGym3Environment> = Box::new(DumbEnv {});
+
+        // This compiles !
+        let _environments = vec![dyn_env, dyn_dumb_env];
+        // We can question the utility though, if they don't take the same action and observation, we won't be able to dispatch an action to the whole vec..
     }
 }
