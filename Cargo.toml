@@ -1,2 +1,27 @@
 [workspace]
-members = ["crates/rl_environment", "crates/agent_baselines", "crates/environment_baselines"]
+members = ["crates/*"]
+resolver = "2" 
+
+[workspace.package]
+rust-version = "1.78"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Tudy Gourmelen"]
+
+[workspace.dependencies]
+# Local crates
+rl_environment = { path = "crates/rl_environment", version = "0.0.0" }
+agent_baselines= { path = "crates/agent_baselines", version = "0.0.0" }
+environment_baselines= { path = "crates/environment_baselines", version = "0.0.0" }
+
+# Non-local crates
+anyhow = "1.0.68"
+itertools = "0.10.5"
+ndarray = { version = "0.15.6", features = ["serde"] }
+ndarray-rand = "0.14.0"
+plotters = "0.3.6"
+rand = "0.8.5"
+rand_isaac = "0.3.0"
+serde = "1.0.148"
+serde_json = "1.0.91"
+egui = "0.20.1"
