@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use rl_environment::{Gym3Environment, Step};
